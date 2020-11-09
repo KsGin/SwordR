@@ -11,7 +11,7 @@
 using namespace VKDemo;
 
 int main() {
-    auto glfwMgr = new GLFWManager();
+	auto* glfwMgr = new GLFWManager();
     
     glfwMgr->CreateWindow("Vulkan Demo", 800, 600);
 	
