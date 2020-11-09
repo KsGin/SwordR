@@ -6,28 +6,27 @@
 #include <vulkan/vulkan.hpp>
 #include <glm/glm.hpp>
 
-int main() {
-    glfwInit();
+#include "Include/GLFWManager.hpp"
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
+using namespace VKDemo;
+
+int main() {
+    auto glfwMgr = new GLFWManager();
+    
+    glfwMgr->CreateWindow("Vulkan Demo", 800, 600);
+	
 
     uint32_t extensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 
     std::cout << extensionCount << " extensions supported" << std::endl;
 
-    glm::mat4 matrix;
-    glm::vec4 vec;
-    auto test = matrix * vec;
-
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
+    while (!glfwMgr->WindowShouldClose())
+    {
+        glfwMgr->Update();
     }
 
-    glfwDestroyWindow(window);
-
-    glfwTerminate();
-
+    glfwMgr->CloseWindow();
+	
     return 0;
 }

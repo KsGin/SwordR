@@ -24,4 +24,12 @@
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Include\GLFWManager.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Include\VkManager.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
