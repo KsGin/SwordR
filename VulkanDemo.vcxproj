@@ -135,13 +135,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\CODES\VulkanDemo\sdk\VulkanSDK\1.2.154.1\Third-Party\glm;E:\CODES\VulkanDemo\sdk\VulkanSDK\1.2.154.1\Third-Party\glfw-3.3.2.bin.WIN64\include;E:\CODES\VulkanDemo\sdk\VulkanSDK\1.2.154.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>sdk\VulkanSDK\1.2.154.1\Third-Party\glm;sdk\VulkanSDK\1.2.154.1\Third-Party\glfw-3.3.2.bin.WIN64\include;sdk\VulkanSDK\1.2.154.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>E:\CODES\VulkanDemo\sdk\VulkanSDK\1.2.154.1\Lib;E:\CODES\VulkanDemo\sdk\VulkanSDK\1.2.154.1\Third-Party\glfw-3.3.2.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>sdk\VulkanSDK\1.2.154.1\Lib;sdk\VulkanSDK\1.2.154.1\Third-Party\glfw-3.3.2.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
