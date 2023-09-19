@@ -16,6 +16,7 @@ namespace VKDemo
 		bool WindowShouldClose();
 		bool CloseWindow();
 		bool Update();
+		GLFWwindow* GetWindow();
 	};
 
 	inline GLFWManager::GLFWManager()
@@ -31,6 +32,12 @@ namespace VKDemo
 	inline bool GLFWManager::CreateWindow(const char* windowName , const int width , const int height)
 	{
 		glfwInit();
+
+		if (GLFW_FALSE == glfwVulkanSupported()) {
+			glfwTerminate();
+			return false;
+		}
+
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		
 		if (windowPtr == nullptr)
@@ -71,5 +78,10 @@ namespace VKDemo
 		
 		glfwPollEvents();
 		return true;
+	}
+
+	inline GLFWwindow* GLFWManager::GetWindow()
+	{
+		return windowPtr;
 	}
 }
