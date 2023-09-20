@@ -53,11 +53,10 @@ int main() {
     while (!window->windowShouldClose())
     {
         window->update();
-        if (device->beginFrame())
-        {
-            device->draw(vertexBuffer, indexBuffer, 6, Device::InternalShader::Color);
-            device->endFrame();
-        }
+        device->beginFrame();
+        device->draw(vertexBuffer, indexBuffer, 6, Device::InternalShader::Color);
+        // device->draw(vertexBuffer, indexBuffer, 6, Device::InternalShader::Texture);
+        device->endFrame();
     }
 
     device->destroyVertexBuffer(vertexBuffer);
