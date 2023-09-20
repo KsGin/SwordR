@@ -8,8 +8,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-#include "Include/GLFWManager.hpp"
-#include "Include/VkManager.hpp"
+#include "include/GLFWManager.hpp"
+#include "include/VkManager.hpp"
 
 using namespace VKDemo;
 
@@ -39,6 +39,7 @@ int main() {
     while (!glfwMgr->WindowShouldClose())
     {
         glfwMgr->Update();
+        vkMgr->Render();
     }
 
     vkMgr->Destroy();

@@ -25,10 +25,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Include\GLFWManager.hpp">
+    <ClInclude Include="src\include\GLFWManager.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\Include\VkManager.hpp">
+    <ClInclude Include="src\include\VkManager.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
