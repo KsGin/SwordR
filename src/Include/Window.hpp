@@ -12,11 +12,11 @@ namespace VKDemo
 		Window();
 		~Window();
 		
-		bool Create(const char* windowName, const int width, const int height);
-		bool WindowShouldClose();
-		bool CloseWindow();
-		bool Update();
-		GLFWwindow* GetWindow();
+		bool create(const char* windowName, const int width, const int height);
+		bool windowShouldClose();
+		bool closeWindow();
+		bool update();
+		GLFWwindow* getWindow();
 	};
 
 	inline Window::Window()
@@ -29,7 +29,7 @@ namespace VKDemo
 		windowPtr = nullptr;
 	}
 
-	inline bool Window::Create(const char* windowName , const int width , const int height)
+	inline bool Window::create(const char* windowName , const int width , const int height)
 	{
 		glfwInit();
 
@@ -47,7 +47,7 @@ namespace VKDemo
 		return true;
 	}
 	
-	inline bool Window::WindowShouldClose()
+	inline bool Window::windowShouldClose()
 	{
 		if (windowPtr == nullptr)
 		{
@@ -57,7 +57,7 @@ namespace VKDemo
 		return glfwWindowShouldClose(windowPtr);
 	}
 
-	inline bool Window::CloseWindow()
+	inline bool Window::closeWindow()
 	{
 		if (windowPtr == nullptr)
 		{
@@ -69,7 +69,7 @@ namespace VKDemo
 		return true;
 	}
 
-	inline bool Window::Update()
+	inline bool Window::update()
 	{
 		if (windowPtr == nullptr)
 		{
@@ -80,7 +80,7 @@ namespace VKDemo
 		return true;
 	}
 
-	inline GLFWwindow* Window::GetWindow()
+	inline GLFWwindow* Window::getWindow()
 	{
 		return windowPtr;
 	}

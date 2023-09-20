@@ -11,7 +11,7 @@ namespace VKDemo
 	class Device
 	{
 	public:
-		bool CreateWithWindow(GLFWwindow* window, int width, int height)
+		bool createWithWindow(GLFWwindow* window, int width, int height)
 		{
             uint32_t extensionCount = 0;
             const char** extensionBuffer = glfwGetRequiredInstanceExtensions(&extensionCount);
@@ -45,7 +45,7 @@ namespace VKDemo
             vkEnumeratePhysicalDevices(instance, &gpuCount, nullptr);
             std::vector<VkPhysicalDevice> GPUs(gpuCount);
             vkEnumeratePhysicalDevices(instance, &gpuCount, GPUs.data());
-            VkPhysicalDevice physicalDevice = GPUs[0];
+            physicalDevice = GPUs[0];
 
             uint32_t queueFamilyCount;
             vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
@@ -255,7 +255,7 @@ namespace VKDemo
             return true;
 		}
 
-        void Destroy() {
+        void destroy() {
             vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
             vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
             vkDestroyFence(device, inFlightFence, nullptr);
@@ -268,7 +268,6 @@ namespace VKDemo
             {
                 vkDestroyPipeline(device, shaderProgramList[i], nullptr);
             }
-
 
             vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
             vkDestroyRenderPass(device, renderPass, nullptr);
@@ -377,12 +376,143 @@ namespace VKDemo
             Texture = 1
         };
 
-        void DrawTriangle(InternalShader shader) {
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shaderProgramList[(uint8_t) shader]);
-            vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        struct Vertex {
+            glm::vec2 pos;
+            glm::vec2 uv;
+            glm::vec4 color;
+
+            static VkVertexInputBindingDescription getBindingDescription() {
+                VkVertexInputBindingDescription bindingDescription{};
+                bindingDescription.binding = 0;
+                bindingDescription.stride = sizeof(Vertex);
+                bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+                return bindingDescription;
+            }
+
+            static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
+                std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+                attributeDescriptions[0].binding = 0;
+                attributeDescriptions[0].location = 0;
+                attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+                attributeDescriptions[0].offset = offsetof(Vertex, pos);
+                attributeDescriptions[1].binding = 0;
+                attributeDescriptions[1].location = 1;
+                attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+                attributeDescriptions[1].offset = offsetof(Vertex, uv);
+                attributeDescriptions[2].binding = 0;
+                attributeDescriptions[2].location = 2;
+                attributeDescriptions[2].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                attributeDescriptions[2].offset = offsetof(Vertex, color);
+                return attributeDescriptions;
+            }
+        };
+
+        typedef VkBuffer VertexBuffer;
+        typedef VkBuffer IndexBuffer;
+
+        void draw(VertexBuffer vertexBuffer, IndexBuffer indexBuffer, uint32_t indexCount, InternalShader shader) {
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shaderProgramList[(uint8_t)shader]);
+
+            VkBuffer vertexBuffers[] = { vertexBuffer };
+            VkDeviceSize offsets[] = { 0 };
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+            vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
+        }
+
+
+        VertexBuffer createVertexBuffer(std::vector<Vertex> vertices) {
+            VertexBuffer vertexBuffer;
+            VkBufferCreateInfo bufferInfo{};
+            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+            bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            if (vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create vertex buffer!");
+            }
+
+            VkMemoryRequirements memRequirements;
+            vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
+
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize = memRequirements.size;
+            allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+            VkDeviceMemory vertexBufferMemory;
+            if (vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate vertex buffer memory!");
+            }
+            vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+            vertexMemoryMap.insert({ vertexBuffer, vertexBufferMemory });
+
+            void* data;
+            vkMapMemory(device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+            memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+            vkUnmapMemory(device, vertexBufferMemory);
+            return vertexBuffer;
+        }
+
+        IndexBuffer createIndexBuffer(std::vector<uint16_t> indices) {
+            IndexBuffer indexBuffer;
+            VkBufferCreateInfo bufferInfo{};
+            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            bufferInfo.size = sizeof(indices[0]) * indices.size();
+            bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            if (vkCreateBuffer(device, &bufferInfo, nullptr, &indexBuffer) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create vertex buffer!");
+            }
+
+            VkMemoryRequirements memRequirements;
+            vkGetBufferMemoryRequirements(device, indexBuffer, &memRequirements);
+
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize = memRequirements.size;
+            allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+            VkDeviceMemory indexBufferMemory;
+            if (vkAllocateMemory(device, &allocInfo, nullptr, &indexBufferMemory) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate vertex buffer memory!");
+            }
+            vkBindBufferMemory(device, indexBuffer, indexBufferMemory, 0);
+            indexMemoryMap.insert({ indexBuffer, indexBufferMemory });
+
+            void* data;
+            vkMapMemory(device, indexBufferMemory, 0, bufferInfo.size, 0, &data);
+            memcpy(data, indices.data(), (size_t)bufferInfo.size);
+            vkUnmapMemory(device, indexBufferMemory);
+            return indexBuffer;
+        }
+
+        void destroyVertexBuffer(VertexBuffer vertexBuffer) {
+            vkFreeMemory(device, vertexMemoryMap[vertexBuffer], nullptr);
+            vertexMemoryMap.erase(vertexBuffer);
+            vkDestroyBuffer(device, vertexBuffer, nullptr);
+        }
+
+        void destroyIndexBuffer(IndexBuffer indexBuffer) {
+            vkFreeMemory(device, vertexMemoryMap[indexBuffer], nullptr);
+            vertexMemoryMap.erase(indexBuffer);
+            vkDestroyBuffer(device, indexBuffer, nullptr);
         }
 
 	private:
+        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+            VkPhysicalDeviceMemoryProperties memProperties;
+            vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+            for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+                if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                    return i;
+                }
+            }
+            throw std::runtime_error("failed to find suitable memory type!");
+        }
+
+
         VkShaderModule createShaderModule(const std::vector<char>& code) {
             VkShaderModuleCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -438,7 +568,11 @@ namespace VKDemo
 
 		std::vector<const char*> instanceExtensions;
 
+        std::unordered_map<VertexBuffer, VkDeviceMemory> vertexMemoryMap{};
+        std::unordered_map<IndexBuffer, VkDeviceMemory> indexMemoryMap{};
+
         VkDevice device = nullptr;
+        VkPhysicalDevice physicalDevice = nullptr;
         VkInstance instance = nullptr;
         VkSurfaceKHR surface = nullptr;
         VkSwapchainKHR swapChain = nullptr;
@@ -485,12 +619,15 @@ namespace VKDemo
             dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
             dynamicState.pDynamicStates = dynamicStates.data();
 
+            auto bindingDescription = Vertex::getBindingDescription();
+            auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
             VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
             vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-            vertexInputInfo.vertexBindingDescriptionCount = 0;
-            vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-            vertexInputInfo.vertexAttributeDescriptionCount = 0;
-            vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+            vertexInputInfo.vertexBindingDescriptionCount = 1;
+            vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+            vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());;
+            vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
 
             VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
             inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
