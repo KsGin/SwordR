@@ -8,46 +8,51 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-#include "include/GLFWManager.hpp"
-#include "include/VkManager.hpp"
+#include "include/Window.hpp"
+#include "include/Device.hpp"
 
 using namespace VKDemo;
 
 int main() {
 
     const char* name = "Vulkan Demo";
-    const int width = 800;
-    const int height = 600;
+    const int width = 1920;
+    const int height = 1080;
 
-	auto* glfwMgr = new GLFWManager();
-    if (!glfwMgr->CreateWindow(name, width, height))
+	auto* window = new Window();
+    if (!window->Create(name, width, height))
     {
         std::cout << "GLFW CreateWindow Failed!!!" << std::endl;
         return -1;
     }
 
-    auto* vkMgr = new VKManager();
-    if (!vkMgr->CreateWithGLFWWindow(glfwMgr->GetWindow(), width, height))
+    auto* device = new Device();
+    if (!device->CreateWithWindow(window->GetWindow(), width, height))
     {
         std::cout << "VK CreateWithGLFWWindow Failed!!!" << std::endl;
-        glfwMgr->CloseWindow();
-        delete glfwMgr;
+        window->CloseWindow();
+        delete window;
         return -1;
     }
     
 
-    while (!glfwMgr->WindowShouldClose())
+    while (!window->WindowShouldClose())
     {
-        glfwMgr->Update();
-        vkMgr->Render();
+        window->Update();
+        if (device->beginFrame())
+        {
+            device->DrawTriangle(Device::InternalShader::Color);
+            device->DrawTriangle(Device::InternalShader::Texture);
+            device->endFrame();
+        }
     }
 
-    vkMgr->Destroy();
-    delete vkMgr;
-    vkMgr = nullptr;
-    glfwMgr->CloseWindow();
-    delete glfwMgr;
-    glfwMgr = nullptr;
+    device->Destroy();
+    delete device;
+    device = nullptr;
+    window->CloseWindow();
+    delete window;
+    window = nullptr;
 	
     return 0;
 }

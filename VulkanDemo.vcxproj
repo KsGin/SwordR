@@ -22,11 +22,14 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="README.md" />
+    <ClInclude Include="src\include\Window.hpp" />
+    <ClInclude Include="src\include\Device.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\include\GLFWManager.hpp" />
-    <ClInclude Include="src\include\VkManager.hpp" />
+    <None Include="src\shaders\color.frag" />
+    <None Include="src\shaders\color.vert" />
+    <None Include="src\shaders\texture.frag" />
+    <None Include="src\shaders\texture.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -136,7 +139,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>sdk\VulkanSDK\1.2.154.1\Third-Party\glm;sdk\VulkanSDK\1.2.154.1\Third-Party\glfw-3.3.2.bin.WIN64\include;sdk\VulkanSDK\1.2.154.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

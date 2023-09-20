@@ -3,33 +3,33 @@
 
 namespace VKDemo
 {
-	class GLFWManager
+	class Window
 	{
 	private:
 		GLFWwindow* windowPtr;
 		
 	public:
-		GLFWManager();
-		~GLFWManager();
+		Window();
+		~Window();
 		
-		bool CreateWindow(const char* windowName, const int width, const int height);
+		bool Create(const char* windowName, const int width, const int height);
 		bool WindowShouldClose();
 		bool CloseWindow();
 		bool Update();
 		GLFWwindow* GetWindow();
 	};
 
-	inline GLFWManager::GLFWManager()
+	inline Window::Window()
 	{
 		windowPtr = nullptr;
 	}
 
-	inline GLFWManager::~GLFWManager()
+	inline Window::~Window()
 	{
 		windowPtr = nullptr;
 	}
 
-	inline bool GLFWManager::CreateWindow(const char* windowName , const int width , const int height)
+	inline bool Window::Create(const char* windowName , const int width , const int height)
 	{
 		glfwInit();
 
@@ -47,7 +47,7 @@ namespace VKDemo
 		return true;
 	}
 	
-	inline bool GLFWManager::WindowShouldClose()
+	inline bool Window::WindowShouldClose()
 	{
 		if (windowPtr == nullptr)
 		{
@@ -57,7 +57,7 @@ namespace VKDemo
 		return glfwWindowShouldClose(windowPtr);
 	}
 
-	inline bool GLFWManager::CloseWindow()
+	inline bool Window::CloseWindow()
 	{
 		if (windowPtr == nullptr)
 		{
@@ -69,7 +69,7 @@ namespace VKDemo
 		return true;
 	}
 
-	inline bool GLFWManager::Update()
+	inline bool Window::Update()
 	{
 		if (windowPtr == nullptr)
 		{
@@ -80,7 +80,7 @@ namespace VKDemo
 		return true;
 	}
 
-	inline GLFWwindow* GLFWManager::GetWindow()
+	inline GLFWwindow* Window::GetWindow()
 	{
 		return windowPtr;
 	}
