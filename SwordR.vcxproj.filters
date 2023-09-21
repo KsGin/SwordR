@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="src\include\device.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\window.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\shaders\color.vert">
+      <Filter>src\shaders</Filter>
+    </None>
+    <None Include="src\shaders\color.frag">
+      <Filter>src\shaders</Filter>
+    </None>
+    <None Include="src\shaders\texture.frag">
+      <Filter>src\shaders</Filter>
+    </None>
+    <None Include="src\shaders\texture.vert">
+      <Filter>src\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{2d50e3bb-fde5-4798-a60e-8a2ec73c3c65}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\include">
+      <UniqueIdentifier>{5b9072d2-d39a-4e45-b1dd-6fe8bc8b2dd9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders">
+      <UniqueIdentifier>{b5fc52aa-5e0d-46db-acb1-103bf24a6f9a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -6,12 +6,12 @@
 #include <GLFW/glfw3.h>
 #include <filesystem>
 
-namespace VKDemo
+namespace SwordR
 {
 	class Device
 	{
 	public:
-		bool createWithWindow(GLFWwindow* window, int width, int height)
+		inline bool createWithWindow(GLFWwindow* window, int width, int height)
 		{
             uint32_t extensionCount = 0;
             const char** extensionBuffer = glfwGetRequiredInstanceExtensions(&extensionCount);
@@ -255,7 +255,7 @@ namespace VKDemo
             return true;
 		}
 
-        void destroy() {
+        inline void destroy() {
             vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
             vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
             vkDestroyFence(device, inFlightFence, nullptr);
@@ -283,7 +283,7 @@ namespace VKDemo
             vkDestroyInstance(instance, nullptr);
         }
 
-        bool beginFrame() {
+        inline bool beginFrame() {
             vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
             vkResetFences(device, 1, &inFlightFence);
             
@@ -325,7 +325,7 @@ namespace VKDemo
             vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
         }
 
-        void endFrame() {
+        inline void endFrame() {
             vkCmdEndRenderPass(commandBuffer);
             if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
                 throw std::runtime_error("failed to record command buffer!");
@@ -410,7 +410,7 @@ namespace VKDemo
         typedef VkBuffer VertexBuffer;
         typedef VkBuffer IndexBuffer;
 
-        void draw(VertexBuffer vertexBuffer, IndexBuffer indexBuffer, uint32_t indexCount, InternalShader shader) {
+        inline void draw(VertexBuffer vertexBuffer, IndexBuffer indexBuffer, uint32_t indexCount, InternalShader shader) {
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shaderProgramList[(uint8_t)shader]);
 
             VkBuffer vertexBuffers[] = { vertexBuffer };
@@ -422,7 +422,7 @@ namespace VKDemo
         }
 
 
-        VertexBuffer createVertexBuffer(std::vector<Vertex> vertices) {
+        inline VertexBuffer createVertexBuffer(std::vector<Vertex> vertices) {
             VertexBuffer vertexBuffer;
             VkBufferCreateInfo bufferInfo{};
             bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -455,7 +455,7 @@ namespace VKDemo
             return vertexBuffer;
         }
 
-        IndexBuffer createIndexBuffer(std::vector<uint16_t> indices) {
+        inline IndexBuffer createIndexBuffer(std::vector<uint16_t> indices) {
             IndexBuffer indexBuffer;
             VkBufferCreateInfo bufferInfo{};
             bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -488,20 +488,20 @@ namespace VKDemo
             return indexBuffer;
         }
 
-        void destroyVertexBuffer(VertexBuffer vertexBuffer) {
+        inline void destroyVertexBuffer(VertexBuffer vertexBuffer) {
             vkFreeMemory(device, vertexMemoryMap[vertexBuffer], nullptr);
             vertexMemoryMap.erase(vertexBuffer);
             vkDestroyBuffer(device, vertexBuffer, nullptr);
         }
 
-        void destroyIndexBuffer(IndexBuffer indexBuffer) {
+        inline void destroyIndexBuffer(IndexBuffer indexBuffer) {
             vkFreeMemory(device, vertexMemoryMap[indexBuffer], nullptr);
             vertexMemoryMap.erase(indexBuffer);
             vkDestroyBuffer(device, indexBuffer, nullptr);
         }
 
 	private:
-        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+        inline uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
             VkPhysicalDeviceMemoryProperties memProperties;
             vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
             for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
@@ -513,7 +513,7 @@ namespace VKDemo
         }
 
 
-        VkShaderModule createShaderModule(const std::vector<char>& code) {
+        inline VkShaderModule createShaderModule(const std::vector<char>& code) {
             VkShaderModuleCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
             createInfo.codeSize = code.size();
@@ -527,7 +527,7 @@ namespace VKDemo
             return shaderModule;
         }
 
-		static std::vector<char> readFile(const std::string& filename) {
+		inline static std::vector<char> readFile(const std::string& filename) {
             std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
             if (!file.is_open()) {
@@ -550,7 +550,7 @@ namespace VKDemo
 
         std::vector<const char*> ValidationLayers = {};
         bool enableValidationLayers = true;
-        bool checkValidationLayerSupport() {
+        inline bool checkValidationLayerSupport() {
             uint32_t layerCount;
             vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -607,7 +607,7 @@ namespace VKDemo
             VkPipeline {}
         };
 
-        void createAllInternalPipeline() {
+        inline void createAllInternalPipeline() {
 
             std::vector<VkDynamicState> dynamicStates = {
                 VK_DYNAMIC_STATE_VIEWPORT,

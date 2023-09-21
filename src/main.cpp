@@ -8,10 +8,10 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-#include "include/Window.hpp"
-#include "include/Device.hpp"
+#include "include/window.h"
+#include "include/device.h"
 
-using namespace VKDemo;
+using namespace SwordR;
 
 int main() {
 
