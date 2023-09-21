@@ -47,5 +47,11 @@
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="sources\texture.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\window.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

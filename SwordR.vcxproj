@@ -34,6 +34,8 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="sources\device.cpp" />
+    <ClCompile Include="sources\texture.cpp" />
+    <ClCompile Include="sources\window.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
