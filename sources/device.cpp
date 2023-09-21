@@ -66,7 +66,7 @@ namespace SwordR {
         deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
         deviceCreateInfo.enabledLayerCount = enableValidationLayers ? static_cast<uint32_t>(ValidationLayers.size()) : 0;
         deviceCreateInfo.ppEnabledLayerNames = enableValidationLayers ? ValidationLayers.data() : nullptr;
-        vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device);
+        vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &logicalDevice);
 
         if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
             throw std::runtime_error("glfwCreateWindowSurface failed");
@@ -124,19 +124,19 @@ namespace SwordR {
             swapChainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
         }
 
-        vkGetDeviceQueue(device, queueFamilyIndices[0], 0, &graphicsQueue);
-        vkGetDeviceQueue(device, queueFamilyIndices[1], 0, &presentQueue);
+        vkGetDeviceQueue(logicalDevice, queueFamilyIndices[0], 0, &graphicsQueue);
+        vkGetDeviceQueue(logicalDevice, queueFamilyIndices[1], 0, &presentQueue);
 
-        if (vkCreateSwapchainKHR(device, &swapChainCreateInfo, nullptr, &swapChain) != VK_SUCCESS)
+        if (vkCreateSwapchainKHR(logicalDevice, &swapChainCreateInfo, nullptr, &swapChain) != VK_SUCCESS)
         {
             throw std::runtime_error("vkCreateSwapChainKHR failed");
             return false;
         }
 
         uint32_t imageCount = std::min(surfCapabilities.minImageCount + 1, surfCapabilities.maxImageCount);
-        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+        vkGetSwapchainImagesKHR(logicalDevice, swapChain, &imageCount, nullptr);
         swapChainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+        vkGetSwapchainImagesKHR(logicalDevice, swapChain, &imageCount, swapChainImages.data());
 
         swapChainImageViews.resize(swapChainImages.size());
         for (size_t i = 0; i < swapChainImages.size(); i++) {
@@ -154,7 +154,7 @@ namespace SwordR {
             createInfo.subresourceRange.levelCount = 1;
             createInfo.subresourceRange.baseArrayLayer = 0;
             createInfo.subresourceRange.layerCount = 1;
-            if (vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
+            if (vkCreateImageView(logicalDevice, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create image views!");
                 return false;
             }
@@ -186,7 +186,7 @@ namespace SwordR {
         renderPassInfo.subpassCount = 1;
         renderPassInfo.pSubpasses = &subpass;
 
-        if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+        if (vkCreateRenderPass(logicalDevice, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
             throw std::runtime_error("failed to create render pass!");
         }
 
@@ -205,7 +205,7 @@ namespace SwordR {
             framebufferInfo.height = swapChainExtent.height;
             framebufferInfo.layers = 1;
 
-            if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+            if (vkCreateFramebuffer(logicalDevice, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create framebuffer!");
             }
         }
@@ -214,7 +214,7 @@ namespace SwordR {
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         poolInfo.queueFamilyIndex = graphicsQueueFamilyIndex;
-        if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+        if (vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create command pool!");
         }
 
@@ -224,7 +224,7 @@ namespace SwordR {
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = 1;
 
-        if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
         }
 
@@ -235,50 +235,122 @@ namespace SwordR {
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-        if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-            vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
-            vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS) {
+        if (vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
+            vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
+            vkCreateFence(logicalDevice, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS) {
             throw std::runtime_error("failed to create semaphores!");
         }
 
         createAllInternalPipeline();
+        createUniformBuffers();
+        createDescriptorPool();
+        createDescriptorSets();
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = uniformBuffers[i];
+            bufferInfo.offset = 0;
+            bufferInfo.range = sizeof(UniformBufferObject);
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = descriptorSets[i];
+            descriptorWrite.dstBinding = 0;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = &bufferInfo;
+            descriptorWrite.pImageInfo = nullptr; // Optional
+            descriptorWrite.pTexelBufferView = nullptr; // Optional
+            vkUpdateDescriptorSets(logicalDevice, 1, &descriptorWrite, 0, nullptr);
+        }
 
         return true;
     }
 
+    void Device::createDescriptorPool() {
+        VkDescriptorPoolSize poolSize{};
+        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = 1;
+        poolInfo.pPoolSizes = &poolSize;
+        poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+        if (vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor pool!");
+        }
+    }
+
+    void Device::createDescriptorSets() {
+        std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = descriptorPool;
+        allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+        allocInfo.pSetLayouts = layouts.data();
+        descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+        if (vkAllocateDescriptorSets(logicalDevice, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate descriptor sets!");
+        }
+    }
+
     void Device::destroy() {
-        vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
-        vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-        vkDestroyFence(device, inFlightFence, nullptr);
-        vkDestroyCommandPool(device, commandPool, nullptr);
+
+        vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
+        vkDestroyDescriptorSetLayout(logicalDevice, descriptorSetLayout, nullptr);
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            vkDestroyBuffer(logicalDevice, uniformBuffers[i], nullptr);
+            vkFreeMemory(logicalDevice, uniformBuffersMemory[i], nullptr);
+        }
+
+        vkDestroyDescriptorSetLayout(logicalDevice, descriptorSetLayout, nullptr);
+
+        vkDestroySemaphore(logicalDevice, imageAvailableSemaphore, nullptr);
+        vkDestroySemaphore(logicalDevice, renderFinishedSemaphore, nullptr);
+        vkDestroyFence(logicalDevice, inFlightFence, nullptr);
+        vkDestroyCommandPool(logicalDevice, commandPool, nullptr);
         for (auto framebuffer : swapChainFramebuffers) {
-            vkDestroyFramebuffer(device, framebuffer, nullptr);
+            vkDestroyFramebuffer(logicalDevice, framebuffer, nullptr);
         }
 
         for (size_t i = 0; i < internalShaderCount; i++)
         {
-            vkDestroyPipeline(device, shaderProgramList[i], nullptr);
+            vkDestroyPipeline(logicalDevice, shaderProgramList[i], nullptr);
         }
 
-        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-        vkDestroyRenderPass(device, renderPass, nullptr);
+        vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
+        vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
 
         for (auto imageView : swapChainImageViews)
         {
-            vkDestroyImageView(device, imageView, nullptr);
+            vkDestroyImageView(logicalDevice, imageView, nullptr);
         }
 
-        vkDestroySwapchainKHR(device, swapChain, nullptr);
+        vkDestroySwapchainKHR(logicalDevice, swapChain, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
-        vkDestroyDevice(device, nullptr);
+        vkDestroyDevice(logicalDevice, nullptr);
         vkDestroyInstance(instance, nullptr);
     }
 
-    bool Device::beginFrame() {
-        vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-        vkResetFences(device, 1, &inFlightFence);
+    void Device::updateUniformBuffer(uint32_t currentImage) {
+        static auto startTime = std::chrono::high_resolution_clock::now();
 
-        vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        UniformBufferObject ubo{};
+        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+        ubo.proj[1][1] *= -1;
+        memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+    }
+
+    bool Device::beginFrame() {
+        vkWaitForFences(logicalDevice, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+        vkResetFences(logicalDevice, 1, &inFlightFence);
+
+        vkAcquireNextImageKHR(logicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
         vkResetCommandBuffer(commandBuffer, 0);
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -314,6 +386,9 @@ namespace SwordR {
         scissor.offset = { 0, 0 };
         scissor.extent = swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[imageIndex], 0, nullptr);
+        updateUniformBuffer(imageIndex);
     }
 
     void Device::endFrame() {
@@ -374,80 +449,41 @@ namespace SwordR {
 
     VkBuffer Device::createVertexBuffer(std::vector<Vertex> vertices) {
         VkBuffer vertexBuffer;
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        if (vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create vertex buffer!");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
         VkDeviceMemory vertexBufferMemory;
-        if (vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate vertex buffer memory!");
-        }
-        vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+        createBuffer(sizeof(vertices[0]) * vertices.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexBuffer, vertexBufferMemory);
         vertexMemoryMap.insert({ vertexBuffer, vertexBufferMemory });
 
         void* data;
-        vkMapMemory(device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-        memcpy(data, vertices.data(), (size_t)bufferInfo.size);
-        vkUnmapMemory(device, vertexBufferMemory);
+        vkMapMemory(logicalDevice, vertexBufferMemory, 0, sizeof(vertices[0]) * vertices.size(), 0, &data);
+        memcpy(data, vertices.data(), (size_t)sizeof(vertices[0]) * vertices.size());
+        vkUnmapMemory(logicalDevice, vertexBufferMemory);
         return vertexBuffer;
     }
 
     VkBuffer Device::createIndexBuffer(std::vector<uint16_t> indices) {
         VkBuffer indexBuffer;
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = sizeof(indices[0]) * indices.size();
-        bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        if (vkCreateBuffer(device, &bufferInfo, nullptr, &indexBuffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create vertex buffer!");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, indexBuffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
         VkDeviceMemory indexBufferMemory;
-        if (vkAllocateMemory(device, &allocInfo, nullptr, &indexBufferMemory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate vertex buffer memory!");
-        }
-        vkBindBufferMemory(device, indexBuffer, indexBufferMemory, 0);
+        
+        createBuffer(sizeof(indices[0]) * indices.size(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, indexBuffer, indexBufferMemory);
         indexMemoryMap.insert({ indexBuffer, indexBufferMemory });
 
         void* data;
-        vkMapMemory(device, indexBufferMemory, 0, bufferInfo.size, 0, &data);
-        memcpy(data, indices.data(), (size_t)bufferInfo.size);
-        vkUnmapMemory(device, indexBufferMemory);
+        vkMapMemory(logicalDevice, indexBufferMemory, 0, sizeof(indices[0]) * indices.size(), 0, &data);
+        memcpy(data, indices.data(), (size_t)sizeof(indices[0]) * indices.size());
+        vkUnmapMemory(logicalDevice, indexBufferMemory);
         return indexBuffer;
     }
 
     void Device::destroyVertexBuffer(VkBuffer vertexBuffer) {
-        vkFreeMemory(device, vertexMemoryMap[vertexBuffer], nullptr);
+        vkFreeMemory(logicalDevice, vertexMemoryMap[vertexBuffer], nullptr);
         vertexMemoryMap.erase(vertexBuffer);
-        vkDestroyBuffer(device, vertexBuffer, nullptr);
+        vkDestroyBuffer(logicalDevice, vertexBuffer, nullptr);
     }
 
     void Device::destroyIndexBuffer(VkBuffer indexBuffer) {
-        vkFreeMemory(device, vertexMemoryMap[indexBuffer], nullptr);
+        vkFreeMemory(logicalDevice, vertexMemoryMap[indexBuffer], nullptr);
         vertexMemoryMap.erase(indexBuffer);
-        vkDestroyBuffer(device, indexBuffer, nullptr);
+        vkDestroyBuffer(logicalDevice, indexBuffer, nullptr);
     }
 
     uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -468,7 +504,7 @@ namespace SwordR {
         createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
         VkShaderModule shaderModule;
-        if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        if (vkCreateShaderModule(logicalDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
             throw std::runtime_error("failed to create shader module!");
         }
 
@@ -491,12 +527,53 @@ namespace SwordR {
         return false;
     }
 
+    void Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+        VkBufferCreateInfo bufferInfo{};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size = size;
+        bufferInfo.usage = usage;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateBuffer(logicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create buffer!");
+        }
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(logicalDevice, buffer, &memRequirements);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+        if (vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate buffer memory!");
+        }
+
+        vkBindBufferMemory(logicalDevice, buffer, bufferMemory, 0);
+    }
+
     void Device::createAllInternalPipeline() {
 
         std::vector<VkDynamicState> dynamicStates = {
             VK_DYNAMIC_STATE_VIEWPORT,
             VK_DYNAMIC_STATE_SCISSOR
         };
+
+        VkDescriptorSetLayoutBinding uboLayoutBinding{};
+        uboLayoutBinding.binding = 0;
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uboLayoutBinding.descriptorCount = 1;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = 1;
+        layoutInfo.pBindings = &uboLayoutBinding;
+
+        if (vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor set layout!");
+        }
 
         VkPipelineDynamicStateCreateInfo dynamicState{};
         dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -544,7 +621,7 @@ namespace SwordR {
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-        rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;
         rasterizer.depthBiasConstantFactor = 0.0f; // Optional
         rasterizer.depthBiasClamp = 0.0f; // Optional
@@ -587,23 +664,23 @@ namespace SwordR {
         colorBlending.blendConstants[2] = 0.0f; // Optional
         colorBlending.blendConstants[3] = 0.0f; // Optional
 
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0; // Optional
-        pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
-        pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-        pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-        if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create pipeline layout!");
-        }
-
         for (size_t i = 0; i < internalShaderCount; i++)
         {
+            VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+            pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+            pipelineLayoutInfo.setLayoutCount = 1; // Optional
+            pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+            pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+            pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+            if (vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create pipeline layout!");
+            }
+
             auto shaderName = shaderNameList[i];
             std::cout << "Current Path : " << std::filesystem::current_path() << std::endl;
-            auto vsShaderCompileCommand = std::format("sdk\\VulkanSDK\\1.2.154.1\\Bin\\glslc.exe src\\shaders\\{}.vert -o x64\\Debug\\{}_vs.spv", shaderName, shaderName);
-            auto fsShaderCompileCommand = std::format("sdk\\VulkanSDK\\1.2.154.1\\Bin\\glslc.exe src\\shaders\\{}.frag -o x64\\Debug\\{}_fs.spv", shaderName, shaderName);
+            auto vsShaderCompileCommand = std::format("sdk\\VulkanSDK\\1.2.154.1\\Bin\\glslc.exe shaders\\{}.vert -o x64\\Debug\\{}_vs.spv", shaderName, shaderName);
+            auto fsShaderCompileCommand = std::format("sdk\\VulkanSDK\\1.2.154.1\\Bin\\glslc.exe shaders\\{}.frag -o x64\\Debug\\{}_fs.spv", shaderName, shaderName);
             std::cout << "Complie Vertex Shader : Execute " << vsShaderCompileCommand << std::endl;
             system(vsShaderCompileCommand.c_str());
             std::cout << "Complie Fragment Shader : Execute " << fsShaderCompileCommand << std::endl;
@@ -648,12 +725,25 @@ namespace SwordR {
             pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
             pipelineInfo.basePipelineIndex = -1; // Optional
 
-            if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &shaderProgramList[i]) != VK_SUCCESS) {
+            if (vkCreateGraphicsPipelines(logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &shaderProgramList[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create graphics pipeline!");
             }
 
-            vkDestroyShaderModule(device, fragShaderModule, nullptr);
-            vkDestroyShaderModule(device, vertShaderModule, nullptr);
+            vkDestroyShaderModule(logicalDevice, fragShaderModule, nullptr);
+            vkDestroyShaderModule(logicalDevice, vertShaderModule, nullptr);
+        }
+    }
+
+    void Device::createUniformBuffers() {
+        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+
+        uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+        uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
+            vkMapMemory(logicalDevice, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
         }
     }
 }

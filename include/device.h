@@ -6,8 +6,10 @@
 #include <GLFW/glfw3.h>
 #include <unordered_map>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <array>
 #include <iostream>
+#include <chrono>
 #include "utils.h"
 
 namespace SwordR
@@ -62,7 +64,17 @@ namespace SwordR
         bool beginFrame();
         void endFrame();
 
+        VkDevice logicalDevice = nullptr;
+        VkPhysicalDevice physicalDevice = nullptr;
+        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+        VkCommandPool commandPool;
+        VkQueue graphicsQueue;
+        VkQueue presentQueue;
+
 	private:
+
+        void updateUniformBuffer(uint32_t currentImage);
+
         std::vector<const char*> deviceExtensions = {
             "VK_KHR_swapchain",
         };
@@ -76,22 +88,22 @@ namespace SwordR
         std::unordered_map<VkBuffer, VkDeviceMemory> vertexMemoryMap{};
         std::unordered_map<VkBuffer, VkDeviceMemory> indexMemoryMap{};
 
-        VkDevice device = nullptr;
-        VkPhysicalDevice physicalDevice = nullptr;
         VkInstance instance = nullptr;
         VkSurfaceKHR surface = nullptr;
         VkSwapchainKHR swapChain = nullptr;
-        VkQueue graphicsQueue;
-        VkQueue presentQueue;
 
         VkRenderPass renderPass;
         VkPipelineLayout pipelineLayout = nullptr;
-        VkCommandPool commandPool;
         VkCommandBuffer commandBuffer;
 
         std::vector<VkImageView> swapChainImageViews;
         std::vector<VkImage> swapChainImages;
         std::vector<VkFramebuffer> swapChainFramebuffers;
+
+        const int MAX_FRAMES_IN_FLIGHT = 2;
+        std::vector<VkBuffer> uniformBuffers;
+        std::vector<VkDeviceMemory> uniformBuffersMemory;
+        std::vector<void*> uniformBuffersMapped;
 
         VkExtent2D swapChainExtent;
         VkSemaphore imageAvailableSemaphore;
@@ -101,7 +113,6 @@ namespace SwordR
         uint32_t imageIndex;
 
         int internalShaderCount = 2;
-        
         std::vector<const char*> shaderNameList{
             "color",
             "texture"
@@ -113,8 +124,22 @@ namespace SwordR
         };
 
         void createAllInternalPipeline();
-        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
         VkShaderModule createShaderModule(const std::vector<char>& code);
+
+        VkDescriptorSetLayout descriptorSetLayout;
+        void createUniformBuffers();
+        void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
+        VkDescriptorPool descriptorPool;
+        void createDescriptorPool();
+        std::vector<VkDescriptorSet> descriptorSets;
+        void createDescriptorSets();
+
+        struct UniformBufferObject {
+            glm::mat4 model;
+            glm::mat4 view;
+            glm::mat4 proj;
+        };
 	};
 }
 
