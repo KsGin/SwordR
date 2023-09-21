@@ -36,7 +36,7 @@ int main() {
     }
     
 
-    const std::vector<Device::Vertex> vertices = {
+    const std::vector<Vertex> vertices = {
         {{-0.5f, -0.5f}, {0, 0}, {1.0f, 0.0f, 0.0f, 1.0f}},
         {{ 0.5f, -0.5f}, {1, 0}, {0.0f, 1.0f, 0.0f, 1.0f}},
         {{-0.5f,  0.5f}, {0, 1}, {0.0f, 0.0f, 1.0f, 1.0f}},
@@ -47,8 +47,8 @@ int main() {
         0, 1, 3, 3, 2, 0
     };
 
-    Device::VertexBuffer vertexBuffer = device->createVertexBuffer(vertices);
-    Device::IndexBuffer indexBuffer = device->createIndexBuffer(indices);
+    VkBuffer vertexBuffer = device->createVertexBuffer(vertices);
+    VkBuffer indexBuffer = device->createIndexBuffer(indices);
 
     while (!window->windowShouldClose())
     {

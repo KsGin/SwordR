@@ -19,9 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\include\device.cpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\include\texture.h" />
+    <ClInclude Include="src\include\utils.h" />
     <ClInclude Include="src\include\window.h" />
     <ClInclude Include="src\include\device.h" />
   </ItemGroup>

@@ -7,6 +7,12 @@
     <ClInclude Include="src\include\window.h">
       <Filter>src\include</Filter>
     </ClInclude>
+    <ClInclude Include="src\include\texture.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\utils.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\color.vert">
@@ -36,6 +42,9 @@
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\include\device.cpp">
+      <Filter>src\include</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
