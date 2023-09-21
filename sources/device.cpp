@@ -1,8 +1,6 @@
-#include "device.h"
+#include "../include/device.h"
 
 namespace SwordR {
-
-
     bool Device::createWithWindow(GLFWwindow* window, int width, int height)
     {
         uint32_t extensionCount = 0;

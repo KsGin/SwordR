@@ -19,20 +19,21 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\include\device.cpp" />
-    <ClCompile Include="src\main.cpp" />
+    <ClInclude Include="include\device.h" />
+    <ClInclude Include="include\stb_image.h" />
+    <ClInclude Include="include\texture.h" />
+    <ClInclude Include="include\utils.h" />
+    <ClInclude Include="include\window.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\include\texture.h" />
-    <ClInclude Include="src\include\utils.h" />
-    <ClInclude Include="src\include\window.h" />
-    <ClInclude Include="src\include\device.h" />
+    <None Include="shaders\color.frag" />
+    <None Include="shaders\color.vert" />
+    <None Include="shaders\texture.frag" />
+    <None Include="shaders\texture.vert" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\shaders\color.frag" />
-    <None Include="src\shaders\color.vert" />
-    <None Include="src\shaders\texture.frag" />
-    <None Include="src\shaders\texture.vert" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="sources\device.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

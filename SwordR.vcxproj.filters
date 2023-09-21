@@ -1,50 +1,51 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClInclude Include="src\include\device.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\window.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\texture.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\utils.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="src\shaders\color.vert">
-      <Filter>src\shaders</Filter>
-    </None>
-    <None Include="src\shaders\color.frag">
-      <Filter>src\shaders</Filter>
-    </None>
-    <None Include="src\shaders\texture.frag">
-      <Filter>src\shaders</Filter>
-    </None>
-    <None Include="src\shaders\texture.vert">
-      <Filter>src\shaders</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Filter Include="src">
-      <UniqueIdentifier>{2d50e3bb-fde5-4798-a60e-8a2ec73c3c65}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\include">
-      <UniqueIdentifier>{5b9072d2-d39a-4e45-b1dd-6fe8bc8b2dd9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\shaders">
+    <Filter Include="shaders">
       <UniqueIdentifier>{b5fc52aa-5e0d-46db-acb1-103bf24a6f9a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{5b9072d2-d39a-4e45-b1dd-6fe8bc8b2dd9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sources">
+      <UniqueIdentifier>{2d50e3bb-fde5-4798-a60e-8a2ec73c3c65}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\main.cpp">
-      <Filter>src</Filter>
+    <ClInclude Include="include\device.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\stb_image.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\texture.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\utils.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\window.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\color.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\color.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\texture.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\texture.vert">
+      <Filter>shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="sources\device.cpp">
+      <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="src\include\device.cpp">
-      <Filter>src\include</Filter>
-    </ClCompile>
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
 </Project>
