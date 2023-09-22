@@ -55,7 +55,7 @@ namespace SwordR
 	class Device
 	{
         friend class GraphicsPipeline;
-        friend class TextureBuilder;
+        friend class Texture;
         friend class Camera;
 
 	public:

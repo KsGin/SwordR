@@ -2,6 +2,7 @@
 #include "../include/pipeline.h"
 
 #include "../include/camera.h"
+#include "../include/texture.h"
 
 namespace SwordR
 {
@@ -20,12 +21,12 @@ namespace SwordR
     }
 
     
-    void GraphicsPipeline::create(Device* device, Camera* camera, VkImageView imageView, VkSampler sampler)
+    void GraphicsPipeline::create(Device* device, Camera* camera, Texture* texture)
     {
         this->device = device;
         createAllInternalPipeline();
         createDescriptorPool();
-        createDescriptorSets(camera, imageView, sampler);
+        createDescriptorSets(camera, texture);
     }
 
     void GraphicsPipeline::createAllInternalPipeline() {
@@ -135,7 +136,7 @@ namespace SwordR
             VkDescriptorSetLayoutCreateInfo layoutInfo{};
             layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 
-            if (static_cast<InternalShaderType>(i) == InternalShaderType::Texture)
+            if (static_cast<InternalShaderType>(i) == InternalShaderType::Unlit_Texture)
             {
                 VkDescriptorSetLayoutBinding samplerLayoutBinding{};
                 samplerLayoutBinding.binding = 1;
@@ -241,7 +242,7 @@ namespace SwordR
         }
     }
 
-    void GraphicsPipeline::createDescriptorSets(Camera* camera, VkImageView imageView, VkSampler sampler) {
+    void GraphicsPipeline::createDescriptorSets(Camera* camera, Texture* texture) {
         std::vector<VkDescriptorSetLayout> layouts(device->MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -261,8 +262,8 @@ namespace SwordR
             bufferInfo.range = sizeof(Camera::UniformBufferPreFrame);
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = imageView;
-            imageInfo.sampler = sampler;
+            imageInfo.imageView = texture->imageView;
+            imageInfo.sampler = texture->sampler;
 
             std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 

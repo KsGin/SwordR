@@ -5,14 +5,14 @@ namespace SwordR
 {
     enum InternalShaderType
     {
-        Color = 0,
-        Texture = 1
+        Unlit_Color = 0,
+        Unlit_Texture = 1
     };
 
 	class GraphicsPipeline
 	{
 	public:
-        void create(Device* device, Camera* camera, VkImageView imageView, VkSampler sampler);
+        void create(Device* device, Camera* camera, Texture* texture);
         void destroy();
         VkPipeline getPipeline(InternalShaderType type);
 
@@ -40,7 +40,7 @@ namespace SwordR
 
         VkDescriptorPool descriptorPool;
         void createDescriptorPool();
-        void createDescriptorSets(Camera* camera, VkImageView imageView, VkSampler sampler);
+        void createDescriptorSets(Camera* camera, Texture* texture);
 
 	};
 }

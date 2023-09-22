@@ -7,17 +7,27 @@
 
 namespace SwordR
 {
-	class TextureBuilder
+	class Texture
 	{
+		friend class GraphicsPipeline;
+
 	public:
+		void create(Device* device, const char* path);
+		void destroy();
+	private:
+
+		Device* device;
+		VkImage image;
+		VkImageView imageView;
+		VkSampler sampler;
+
 		VkImage CreateImageFromPath(Device* device, const char* path);
 		void releaseImage(Device* device, VkImage image);
 		VkImageView createImageView(Device* device, VkImage image, VkFormat format);
 		void releaseImageView(Device* device, VkImageView imageView);
 		VkSampler createSampler(Device* device);
 		void releaseSampler(Device* device, VkSampler sampler);
-	private:
-        
+
 		VkCommandBuffer beginSingleTimeCommands(Device* device);
 		void endSingleTimeCommands(Device* device, VkCommandBuffer commandBuffer);
 		void copyBuffer(Device* device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
