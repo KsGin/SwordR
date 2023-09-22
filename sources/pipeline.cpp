@@ -1,6 +1,8 @@
 #pragma once
 #include "../include/pipeline.h"
 
+#include "../include/camera.h"
+
 namespace SwordR
 {
     VkShaderModule GraphicsPipeline::createShaderModule(const std::vector<char>& code) {
@@ -18,12 +20,12 @@ namespace SwordR
     }
 
     
-    void GraphicsPipeline::create(Device* device, VkImageView imageView, VkSampler sampler)
+    void GraphicsPipeline::create(Device* device, Camera* camera, VkImageView imageView, VkSampler sampler)
     {
         this->device = device;
         createAllInternalPipeline();
         createDescriptorPool();
-        createDescriptorSets(imageView, sampler);
+        createDescriptorSets(camera, imageView, sampler);
     }
 
     void GraphicsPipeline::createAllInternalPipeline() {
@@ -239,7 +241,7 @@ namespace SwordR
         }
     }
 
-    void GraphicsPipeline::createDescriptorSets(VkImageView imageView, VkSampler sampler) {
+    void GraphicsPipeline::createDescriptorSets(Camera* camera, VkImageView imageView, VkSampler sampler) {
         std::vector<VkDescriptorSetLayout> layouts(device->MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -254,9 +256,9 @@ namespace SwordR
 
         for (size_t i = 0; i < device->MAX_FRAMES_IN_FLIGHT; i++) {
             VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = device->uniformBuffers[i];
+            bufferInfo.buffer = camera->uniformBuffers[i];
             bufferInfo.offset = 0;
-            bufferInfo.range = sizeof(UniformBufferObject);
+            bufferInfo.range = sizeof(Camera::UniformBufferPreFrame);
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             imageInfo.imageView = imageView;

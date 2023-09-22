@@ -56,6 +56,7 @@ namespace SwordR
 	{
         friend class GraphicsPipeline;
         friend class TextureBuilder;
+        friend class Camera;
 
 	public:
         void draw(VkBuffer vertexBuffer, VkBuffer indexBuffer, uint32_t indexCount, VkPipelineLayout layout, VkPipeline pipeline, std::vector<VkDescriptorSet> descriptorSets);
@@ -71,7 +72,6 @@ namespace SwordR
 	private:
         void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
         void updateUniformBuffer(uint32_t currentImage);
-        void createUniformBuffers();
 
         std::vector<const char*> deviceExtensions = {
             "VK_KHR_swapchain",
@@ -105,9 +105,6 @@ namespace SwordR
         std::vector<VkFramebuffer> swapChainFramebuffers;
 
         const int MAX_FRAMES_IN_FLIGHT = 2;
-        std::vector<VkBuffer> uniformBuffers;
-        std::vector<VkDeviceMemory> uniformBuffersMemory;
-        std::vector<void*> uniformBuffersMapped;
 
         VkSemaphore imageAvailableSemaphore;
         VkSemaphore renderFinishedSemaphore;

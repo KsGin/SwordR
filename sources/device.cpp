@@ -242,17 +242,10 @@ namespace SwordR {
             throw std::runtime_error("failed to create semaphores!");
         }
 
-        createUniformBuffers();
-
         return true;
     }
 
     void Device::destroy() {
-
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            vkDestroyBuffer(logicalDevice, uniformBuffers[i], nullptr);
-            vkFreeMemory(logicalDevice, uniformBuffersMemory[i], nullptr);
-        }
 
         vkDestroySemaphore(logicalDevice, imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(logicalDevice, renderFinishedSemaphore, nullptr);
@@ -276,15 +269,13 @@ namespace SwordR {
     }
 
     void Device::updateUniformBuffer(uint32_t currentImage) {
-        static auto startTime = std::chrono::high_resolution_clock::now();
+        //static auto startTime = std::chrono::high_resolution_clock::now();
 
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-        UniformBufferObject ubo{};
-        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        ubo.view = glm::lookAt(glm::vec3(0, 0, 1.5), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-        ubo.proj = glm::perspective(glm::radians(60.0f), swapChainExtent.width / static_cast<float>(swapChainExtent.height), 0.01f, 10.0f);
-        memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+        //auto currentTime = std::chrono::high_resolution_clock::now();
+        //float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        //UniformBufferObject ubo{};
+        //ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        //memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }
 
     bool Device::beginFrame() {
@@ -480,19 +471,4 @@ namespace SwordR {
 
         return false;
     }
-
-
-    void Device::createUniformBuffers() {
-        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-
-        uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-        uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
-        uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
-
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
-            vkMapMemory(logicalDevice, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
-        }
-    }
-
 }

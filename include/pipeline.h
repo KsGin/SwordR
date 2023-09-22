@@ -12,7 +12,7 @@ namespace SwordR
 	class GraphicsPipeline
 	{
 	public:
-        void create(Device* device, VkImageView imageView, VkSampler sampler);
+        void create(Device* device, Camera* camera, VkImageView imageView, VkSampler sampler);
         void destroy();
         VkPipeline getPipeline(InternalShaderType type);
 
@@ -40,7 +40,7 @@ namespace SwordR
 
         VkDescriptorPool descriptorPool;
         void createDescriptorPool();
-        void createDescriptorSets(VkImageView imageView, VkSampler sampler);
+        void createDescriptorSets(Camera* camera, VkImageView imageView, VkSampler sampler);
 
 	};
 }

@@ -30,6 +30,9 @@
     <ClInclude Include="include\pipeline.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\camera.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\color.frag">
@@ -57,6 +60,9 @@
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="sources\pipeline.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\camera.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
