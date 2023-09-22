@@ -6,7 +6,7 @@
 
 namespace SwordR
 {
-	class Utils
+	class utils
 	{
 	public:
 		inline static std::vector<char> readFile(const std::string& filename) {

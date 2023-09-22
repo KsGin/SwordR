@@ -2,6 +2,8 @@
 
 #include <string>
 #include <stdexcept>
+#include <unordered_map>
+
 #include "vulkan/vulkan.h"
 #include "device.h"
 
@@ -9,7 +11,7 @@ namespace SwordR
 {
 	class Texture
 	{
-		friend class GraphicsPipeline;
+		friend class Pipeline;
 
 	public:
 		void create(Device* device, const char* path);

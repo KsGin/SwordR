@@ -1,6 +1,11 @@
 #pragma once
 #include "../include/device.h"
 
+#include <stdexcept>
+
+#include "../include/model.h"
+#include "../include/pipeline.h"
+
 namespace SwordR {
     bool Device::createWithWindow(GLFWwindow* window, int width, int height)
     {
@@ -246,6 +251,7 @@ namespace SwordR {
     }
 
     void Device::destroy() {
+        vkWaitForFences(logicalDevice, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
 
         vkDestroySemaphore(logicalDevice, imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(logicalDevice, renderFinishedSemaphore, nullptr);
@@ -266,16 +272,6 @@ namespace SwordR {
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyDevice(logicalDevice, nullptr);
         vkDestroyInstance(instance, nullptr);
-    }
-
-    void Device::updateUniformBuffer(uint32_t currentImage) {
-        //static auto startTime = std::chrono::high_resolution_clock::now();
-
-        //auto currentTime = std::chrono::high_resolution_clock::now();
-        //float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-        //UniformBufferObject ubo{};
-        //ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        //memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }
 
     bool Device::beginFrame() {
@@ -318,8 +314,6 @@ namespace SwordR {
         scissor.offset = { 0, 0 };
         scissor.extent = swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-        updateUniformBuffer(imageIndex);
     }
 
     void Device::endFrame() {
@@ -367,43 +361,17 @@ namespace SwordR {
         vkQueuePresentKHR(presentQueue, &presentInfo);
     }
 
-    void Device::draw(VkBuffer vertexBuffer, VkBuffer indexBuffer, uint32_t indexCount, VkPipelineLayout layout, VkPipeline pipeline, std::vector<VkDescriptorSet> descriptorSets) {
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descriptorSets[imageIndex], 0, nullptr);
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    void Device::draw(Model* model, Pipeline* pipeline) {
+        model->updateModelUBO();
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout, 0, 1, &pipeline->descriptorSets[imageIndex], 0, nullptr);
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
 
-        VkBuffer vertexBuffers[] = { vertexBuffer };
+        VkBuffer vertexBuffers[] = { model->vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(commandBuffer, model->indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-        vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
-    }
-
-    VkBuffer Device::createVertexBuffer(std::vector<Vertex> vertices) {
-        VkBuffer vertexBuffer;
-        VkDeviceMemory vertexBufferMemory;
-        createBuffer(sizeof(vertices[0]) * vertices.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexBuffer, vertexBufferMemory);
-        vertexMemoryMap.insert({ vertexBuffer, vertexBufferMemory });
-
-        void* data;
-        vkMapMemory(logicalDevice, vertexBufferMemory, 0, sizeof(vertices[0]) * vertices.size(), 0, &data);
-        memcpy(data, vertices.data(), (size_t)sizeof(vertices[0]) * vertices.size());
-        vkUnmapMemory(logicalDevice, vertexBufferMemory);
-        return vertexBuffer;
-    }
-
-    VkBuffer Device::createIndexBuffer(std::vector<uint16_t> indices) {
-        VkBuffer indexBuffer;
-        VkDeviceMemory indexBufferMemory;
-        
-        createBuffer(sizeof(indices[0]) * indices.size(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, indexBuffer, indexBufferMemory);
-        indexMemoryMap.insert({ indexBuffer, indexBufferMemory });
-
-        void* data;
-        vkMapMemory(logicalDevice, indexBufferMemory, 0, sizeof(indices[0]) * indices.size(), 0, &data);
-        memcpy(data, indices.data(), (size_t)sizeof(indices[0]) * indices.size());
-        vkUnmapMemory(logicalDevice, indexBufferMemory);
-        return indexBuffer;
+        vkCmdDrawIndexed(commandBuffer, model->getIndexCount(), 1, 0, 0, 0);
     }
 
     void Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
@@ -430,18 +398,6 @@ namespace SwordR {
         }
 
         vkBindBufferMemory(logicalDevice, buffer, bufferMemory, 0);
-    }
-
-    void Device::destroyVertexBuffer(VkBuffer vertexBuffer) {
-        vkFreeMemory(logicalDevice, vertexMemoryMap[vertexBuffer], nullptr);
-        vertexMemoryMap.erase(vertexBuffer);
-        vkDestroyBuffer(logicalDevice, vertexBuffer, nullptr);
-    }
-
-    void Device::destroyIndexBuffer(VkBuffer indexBuffer) {
-        vkFreeMemory(logicalDevice, vertexMemoryMap[indexBuffer], nullptr);
-        vertexMemoryMap.erase(indexBuffer);
-        vkDestroyBuffer(logicalDevice, indexBuffer, nullptr);
     }
 
     uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {

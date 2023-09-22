@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="include\camera.h" />
     <ClInclude Include="include\device.h" />
+    <ClInclude Include="include\model.h" />
     <ClInclude Include="include\pipeline.h" />
     <ClInclude Include="include\stb_image.h" />
     <ClInclude Include="include\texture.h" />
@@ -37,6 +38,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="sources\camera.cpp" />
     <ClCompile Include="sources\device.cpp" />
+    <ClCompile Include="sources\model.cpp" />
     <ClCompile Include="sources\pipeline.cpp" />
     <ClCompile Include="sources\texture.cpp" />
     <ClCompile Include="sources\window.cpp" />

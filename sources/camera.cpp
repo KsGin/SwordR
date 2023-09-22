@@ -5,7 +5,7 @@ namespace SwordR
 	void Camera::create(Device* device)
 	{
 		this->device = device;
-		VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+		VkDeviceSize bufferSize = sizeof(UniformBufferPreFrame);
 
 		uniformBuffers.resize(device->MAX_FRAMES_IN_FLIGHT);
 		uniformBuffersMemory.resize(device->MAX_FRAMES_IN_FLIGHT);

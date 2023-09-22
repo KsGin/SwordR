@@ -13,6 +13,7 @@
 #include "include/pipeline.h"
 #include "include/texture.h"
 #include "include/camera.h"
+#include "include/model.h"
 
 using namespace SwordR;
 
@@ -43,29 +44,21 @@ int main() {
 
     auto* camera = new Camera();
     camera->create(device);
-    camera->position = glm::vec3(0, 0, 2);
+    camera->position = glm::vec3(0, 0, 1.5f);
     camera->lookAt = glm::vec3(0, 0, 0);
     camera->aspect = static_cast<float>(width) / height;
     camera->fov = 45;
     camera->near = 0.01f;
     camera->far = 100;
 
-    auto* graphicsPipeline = new GraphicsPipeline();
-    graphicsPipeline->create(device, camera, texture);
+    auto* model = new Model();
+    model->create(device, Model::Quad);
 
-    const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f}, {0, 0}, {1.0f, 0.0f, 0.0f, 1.0f}},
-        {{ 0.5f, -0.5f}, {1, 0}, {0.0f, 1.0f, 0.0f, 1.0f}},
-        {{-0.5f,  0.5f}, {0, 1}, {0.0f, 0.0f, 1.0f, 1.0f}},
-        {{ 0.5f,  0.5f}, {1, 1}, {1.0f, 0.0f, 1.0f, 1.0f}}
+    auto* pipeline = new Pipeline();
+    Pipeline::PipelineCreateInfo info{
+        Pipeline::BaseMap, camera, texture, model
     };
-
-    const std::vector<uint16_t> indices = {
-        0, 1, 3, 3, 2, 0
-    };
-
-    VkBuffer vertexBuffer = device->createVertexBuffer(vertices);
-    VkBuffer indexBuffer = device->createIndexBuffer(indices);
+    pipeline->create(device, info);
 
     while (!window->windowShouldClose())
     {
@@ -74,26 +67,27 @@ int main() {
         camera->updateCameraUBO();
 
         device->beginFrame();
-        device->draw(vertexBuffer, indexBuffer, 6, graphicsPipeline->pipelineLayout, graphicsPipeline->getPipeline(InternalShaderType::Unlit_Texture), graphicsPipeline->descriptorSets);
-        // device->draw(vertexBuffer, indexBuffer, 6, Device::InternalShader::Unlit_Texture);
+        device->draw(model, pipeline);
         device->endFrame();
     }
 
-    device->destroyVertexBuffer(vertexBuffer);
-    device->destroyIndexBuffer(indexBuffer);
+    model->destroy();
+    model = nullptr;
 
     texture->destroy();
     delete texture;
 
     camera->destroy();
-    graphicsPipeline->destroy();
+    delete camera;
+
+    pipeline->destroy();
+    delete pipeline;
 
     device->destroy();
     delete device;
-    device = nullptr;
+
     window->closeWindow();
     delete window;
-    window = nullptr;
 	
     return 0;
 }

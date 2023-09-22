@@ -10,7 +10,7 @@ namespace SwordR
 {
 	class Camera
 	{
-		friend class GraphicsPipeline;
+		friend class Pipeline;
 
 		Device* device;
 

@@ -1,12 +1,15 @@
 #pragma once
+#include <filesystem>
+#include <iostream>
 #include "../include/pipeline.h"
-
 #include "../include/camera.h"
+#include "../include/model.h"
 #include "../include/texture.h"
+#include "../include/utils.h"
 
 namespace SwordR
 {
-    VkShaderModule GraphicsPipeline::createShaderModule(const std::vector<char>& code) {
+    VkShaderModule Pipeline::createShaderModule(const std::vector<char>& code) {
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         createInfo.codeSize = code.size();
@@ -21,15 +24,16 @@ namespace SwordR
     }
 
     
-    void GraphicsPipeline::create(Device* device, Camera* camera, Texture* texture)
+    void Pipeline::create(Device* device, PipelineCreateInfo info)
     {
         this->device = device;
-        createAllInternalPipeline();
+        this->info = info;
+        createPipeline();
         createDescriptorPool();
-        createDescriptorSets(camera, texture);
+        createDescriptorSets();
     }
 
-    void GraphicsPipeline::createAllInternalPipeline() {
+    void Pipeline::createPipeline() {
 
         std::vector<VkDynamicState> dynamicStates = {
             VK_DYNAMIC_STATE_VIEWPORT,
@@ -41,8 +45,8 @@ namespace SwordR
         dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         dynamicState.pDynamicStates = dynamicStates.data();
 
-        auto bindingDescription = Vertex::getBindingDescription();
-        auto attributeDescriptions = Vertex::getAttributeDescriptions();
+        auto bindingDescription = Model::Vertex::getBindingDescription();
+        auto attributeDescriptions = Model::Vertex::getAttributeDescriptions();
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -59,8 +63,8 @@ namespace SwordR
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = (float)device->swapChainExtent.width;
-        viewport.height = (float)device->swapChainExtent.height;
+        viewport.width = static_cast<float>(device->swapChainExtent.width);
+        viewport.height = static_cast<float>(device->swapChainExtent.height);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
@@ -125,112 +129,130 @@ namespace SwordR
         colorBlending.blendConstants[2] = 0.0f; // Optional
         colorBlending.blendConstants[3] = 0.0f; // Optional
 
-        for (size_t i = 0; i < internalShaderCount; i++)
-        {
-            VkDescriptorSetLayoutBinding uboLayoutBinding{};
-            uboLayoutBinding.binding = 0;
-            uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            uboLayoutBinding.descriptorCount = 1;
-            uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-            uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
-            VkDescriptorSetLayoutCreateInfo layoutInfo{};
-            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 
-            if (static_cast<InternalShaderType>(i) == InternalShaderType::Unlit_Texture)
-            {
+        VkDescriptorSetLayoutBinding cameraUBOLayoutBinding{};
+        cameraUBOLayoutBinding.binding = 0;
+        cameraUBOLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        cameraUBOLayoutBinding.descriptorCount = 1;
+        cameraUBOLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        cameraUBOLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+        VkDescriptorSetLayoutBinding modelUBOLayoutBinding{};
+        modelUBOLayoutBinding.binding = 1;
+        modelUBOLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        modelUBOLayoutBinding.descriptorCount = 1;
+        modelUBOLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        modelUBOLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+
+        switch (info.type)
+        {
+			case PipelineType::BaseMap : {
                 VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-                samplerLayoutBinding.binding = 1;
+                samplerLayoutBinding.binding = 2;
                 samplerLayoutBinding.descriptorCount = 1;
                 samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 samplerLayoutBinding.pImmutableSamplers = nullptr;
                 samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-                std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
+
+                std::array<VkDescriptorSetLayoutBinding, 3> bindings = { cameraUBOLayoutBinding, modelUBOLayoutBinding, samplerLayoutBinding };
+                layoutInfo.bindingCount = 3;
+                layoutInfo.pBindings = bindings.data();
+		        break;
+	        }
+
+			case BaseColor:{
+                std::array<VkDescriptorSetLayoutBinding, 2> bindings = { cameraUBOLayoutBinding, modelUBOLayoutBinding };
                 layoutInfo.bindingCount = 2;
                 layoutInfo.pBindings = bindings.data();
-            }
-            else
-            {
-                layoutInfo.bindingCount = 1;
-                layoutInfo.pBindings = &uboLayoutBinding;
-            }
-            if (vkCreateDescriptorSetLayout(device->logicalDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create descriptor set layout!");
-            }
-
-            VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-            pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-            pipelineLayoutInfo.setLayoutCount = 1; // Optional
-            pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-            pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-            pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-            if (vkCreatePipelineLayout(device->logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create pipeline layout!");
-            }
-
-            auto shaderName = shaderNameList[i];
-            std::cout << "Current Path : " << std::filesystem::current_path() << std::endl;
-            auto vsShaderCompileCommand = std::format("sdk\\VulkanSDK\\1.2.154.1\\Bin\\glslc.exe shaders\\{}.vert -o x64\\Debug\\{}_vs.spv", shaderName, shaderName);
-            auto fsShaderCompileCommand = std::format("sdk\\VulkanSDK\\1.2.154.1\\Bin\\glslc.exe shaders\\{}.frag -o x64\\Debug\\{}_fs.spv", shaderName, shaderName);
-            std::cout << "Complie Vertex Shader : Execute " << vsShaderCompileCommand << std::endl;
-            system(vsShaderCompileCommand.c_str());
-            std::cout << "Complie Fragment Shader : Execute " << fsShaderCompileCommand << std::endl;
-            system(fsShaderCompileCommand.c_str());
-
-            auto vertexShaderCodePath = std::format("x64\\Debug\\{}_vs.spv", shaderName);
-            auto fragmentShaderCodePath = std::format("x64\\Debug\\{}_fs.spv", shaderName);
-            auto vertShaderCode = Utils::readFile(vertexShaderCodePath);
-            auto fragShaderCode = Utils::readFile(fragmentShaderCodePath);
-            VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-            VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
-
-            VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-            vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-            vertShaderStageInfo.module = vertShaderModule;
-            vertShaderStageInfo.pName = "main";
-
-            VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-            fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-            fragShaderStageInfo.module = fragShaderModule;
-            fragShaderStageInfo.pName = "main";
-
-            VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
-
-            VkGraphicsPipelineCreateInfo pipelineInfo{};
-            pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-            pipelineInfo.stageCount = 2;
-            pipelineInfo.pStages = shaderStages;
-            pipelineInfo.pVertexInputState = &vertexInputInfo;
-            pipelineInfo.pInputAssemblyState = &inputAssembly;
-            pipelineInfo.pViewportState = &viewportState;
-            pipelineInfo.pRasterizationState = &rasterizer;
-            pipelineInfo.pMultisampleState = &multisampling;
-            pipelineInfo.pDepthStencilState = nullptr; // Optional
-            pipelineInfo.pColorBlendState = &colorBlending;
-            pipelineInfo.pDynamicState = &dynamicState;
-            pipelineInfo.layout = pipelineLayout;
-            pipelineInfo.renderPass = device->renderPass;
-            pipelineInfo.subpass = 0;
-            pipelineInfo.basePipelineHandle = nullptr; // Optional
-            pipelineInfo.basePipelineIndex = -1; // Optional
-
-            if (vkCreateGraphicsPipelines(device->logicalDevice, nullptr, 1, &pipelineInfo, nullptr, &graphicsPipelineList[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create graphics pipeline!");
-            }
-
-            vkDestroyShaderModule(device->logicalDevice, fragShaderModule, nullptr);
-            vkDestroyShaderModule(device->logicalDevice, vertShaderModule, nullptr);
+                break;
+			}
+            default:{
+                throw std::runtime_error("type not found");
+			}
         }
+
+        if (vkCreateDescriptorSetLayout(device->logicalDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor set layout!");
+        }
+
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = 1; // Optional
+        pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+        pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+        pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+        if (vkCreatePipelineLayout(device->logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create pipeline layout!");
+        }
+
+        auto shaderName = shaderNameList[static_cast<int>(info.type)];
+        std::cout << "Current Path : " << std::filesystem::current_path() << std::endl;
+        auto vsShaderCompileCommand = std::format("sdk\\VulkanSDK\\1.2.154.1\\Bin\\glslc.exe shaders\\{}.vert -o x64\\Debug\\{}_vs.spv", shaderName, shaderName);
+        auto fsShaderCompileCommand = std::format("sdk\\VulkanSDK\\1.2.154.1\\Bin\\glslc.exe shaders\\{}.frag -o x64\\Debug\\{}_fs.spv", shaderName, shaderName);
+        std::cout << "Complie Vertex Shader : Execute " << vsShaderCompileCommand << std::endl;
+        system(vsShaderCompileCommand.c_str());
+        std::cout << "Complie Fragment Shader : Execute " << fsShaderCompileCommand << std::endl;
+        system(fsShaderCompileCommand.c_str());
+
+        auto vertexShaderCodePath = std::format("x64\\Debug\\{}_vs.spv", shaderName);
+        auto fragmentShaderCodePath = std::format("x64\\Debug\\{}_fs.spv", shaderName);
+        auto vertShaderCode = utils::readFile(vertexShaderCodePath);
+        auto fragShaderCode = utils::readFile(fragmentShaderCodePath);
+        VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+        VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+
+        VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+        vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+        vertShaderStageInfo.module = vertShaderModule;
+        vertShaderStageInfo.pName = "main";
+
+        VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+        fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        fragShaderStageInfo.module = fragShaderModule;
+        fragShaderStageInfo.pName = "main";
+
+        VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+        VkGraphicsPipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipelineInfo.stageCount = 2;
+        pipelineInfo.pStages = shaderStages;
+        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.pInputAssemblyState = &inputAssembly;
+        pipelineInfo.pViewportState = &viewportState;
+        pipelineInfo.pRasterizationState = &rasterizer;
+        pipelineInfo.pMultisampleState = &multisampling;
+        pipelineInfo.pDepthStencilState = nullptr; // Optional
+        pipelineInfo.pColorBlendState = &colorBlending;
+        pipelineInfo.pDynamicState = &dynamicState;
+        pipelineInfo.layout = pipelineLayout;
+        pipelineInfo.renderPass = device->renderPass;
+        pipelineInfo.subpass = 0;
+        pipelineInfo.basePipelineHandle = nullptr; // Optional
+        pipelineInfo.basePipelineIndex = -1; // Optional
+
+        if (vkCreateGraphicsPipelines(device->logicalDevice, nullptr, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create graphics pipeline!");
+        }
+
+        vkDestroyShaderModule(device->logicalDevice, fragShaderModule, nullptr);
+        vkDestroyShaderModule(device->logicalDevice, vertShaderModule, nullptr);
     }
 
-    void GraphicsPipeline::createDescriptorPool() {
-        std::array<VkDescriptorPoolSize, 2> poolSizes{};
+    void Pipeline::createDescriptorPool() {
+        std::array<VkDescriptorPoolSize, 3> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
-        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[1].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
+        poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[2].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -242,7 +264,7 @@ namespace SwordR
         }
     }
 
-    void GraphicsPipeline::createDescriptorSets(Camera* camera, Texture* texture) {
+    void Pipeline::createDescriptorSets() {
         std::vector<VkDescriptorSetLayout> layouts(device->MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -256,16 +278,20 @@ namespace SwordR
         }
 
         for (size_t i = 0; i < device->MAX_FRAMES_IN_FLIGHT; i++) {
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = camera->uniformBuffers[i];
-            bufferInfo.offset = 0;
-            bufferInfo.range = sizeof(Camera::UniformBufferPreFrame);
+            VkDescriptorBufferInfo cameraUBOInfo{};
+            cameraUBOInfo.buffer = info.camera->uniformBuffers[i];
+            cameraUBOInfo.offset = 0;
+            cameraUBOInfo.range = sizeof(Camera::UniformBufferPreFrame);
+            VkDescriptorBufferInfo modelUBOInfo{};
+            modelUBOInfo.buffer = info.model->uniformBuffers[i];
+            modelUBOInfo.offset = 0;
+            modelUBOInfo.range = sizeof(Model::UniformBufferPreDraw);
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = texture->imageView;
-            imageInfo.sampler = texture->sampler;
+            imageInfo.imageView = info.texture->imageView;
+            imageInfo.sampler = info.texture->sampler;
 
-            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
 
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = descriptorSets[i];
@@ -273,36 +299,33 @@ namespace SwordR
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &bufferInfo;
-
+            descriptorWrites[0].pBufferInfo = &cameraUBOInfo;
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[1].dstSet = descriptorSets[i];
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &imageInfo;
+            descriptorWrites[1].pBufferInfo = &modelUBOInfo;
+            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[2].dstSet = descriptorSets[i];
+            descriptorWrites[2].dstBinding = 2;
+            descriptorWrites[2].dstArrayElement = 0;
+            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pImageInfo = &imageInfo;
 
             vkUpdateDescriptorSets(device->logicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
     }
 
-    void GraphicsPipeline::destroy()
+    void Pipeline::destroy()
     {
         vkDestroyDescriptorPool(device->logicalDevice, descriptorPool, nullptr);
         vkDestroyDescriptorSetLayout(device->logicalDevice, descriptorSetLayout, nullptr);
         vkDestroyDescriptorSetLayout(device->logicalDevice, descriptorSetLayout, nullptr);
 
-        for (size_t i = 0; i < internalShaderCount; i++)
-        {
-            vkDestroyPipeline(device->logicalDevice, graphicsPipelineList[i], nullptr);
-        }
-
+        vkDestroyPipeline(device->logicalDevice, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device->logicalDevice, pipelineLayout, nullptr);
-    }
-
-    VkPipeline GraphicsPipeline::getPipeline(InternalShaderType type)
-    {
-        return graphicsPipelineList[(int)type];
     }
 }
