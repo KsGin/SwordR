@@ -45,16 +45,20 @@ namespace SwordR
         }
     };
 
+    struct UniformBufferObject {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 proj;
+    };
+    
+
 	class Device
 	{
-	public:
-        enum InternalShader
-        {
-            Color = 0,
-            Texture = 1
-        };     
+        friend class GraphicsPipeline;
+        friend class Texture;
 
-        void draw(VkBuffer vertexBuffer, VkBuffer indexBuffer, uint32_t indexCount, InternalShader shader);
+	public:
+        void draw(VkBuffer vertexBuffer, VkBuffer indexBuffer, uint32_t indexCount, VkPipelineLayout layout, VkPipeline pipeline, std::vector<VkDescriptorSet> descriptorSets);
         VkBuffer createVertexBuffer(std::vector<Vertex> vertices);
         VkBuffer createIndexBuffer(std::vector<uint16_t> indices);
         void destroyVertexBuffer(VkBuffer vertexBuffer);
@@ -64,16 +68,10 @@ namespace SwordR
         bool beginFrame();
         void endFrame();
 
-        VkDevice logicalDevice = nullptr;
-        VkPhysicalDevice physicalDevice = nullptr;
-        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-        VkCommandPool commandPool;
-        VkQueue graphicsQueue;
-        VkQueue presentQueue;
-
 	private:
-
+        void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
         void updateUniformBuffer(uint32_t currentImage);
+        void createUniformBuffers();
 
         std::vector<const char*> deviceExtensions = {
             "VK_KHR_swapchain",
@@ -91,9 +89,15 @@ namespace SwordR
         VkInstance instance = nullptr;
         VkSurfaceKHR surface = nullptr;
         VkSwapchainKHR swapChain = nullptr;
+        VkDevice logicalDevice = nullptr;
+        VkPhysicalDevice physicalDevice = nullptr;
+        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+        VkCommandPool commandPool;
+        VkQueue graphicsQueue;
+        VkQueue presentQueue;
+        VkExtent2D swapChainExtent;
 
         VkRenderPass renderPass;
-        VkPipelineLayout pipelineLayout = nullptr;
         VkCommandBuffer commandBuffer;
 
         std::vector<VkImageView> swapChainImageViews;
@@ -105,41 +109,11 @@ namespace SwordR
         std::vector<VkDeviceMemory> uniformBuffersMemory;
         std::vector<void*> uniformBuffersMapped;
 
-        VkExtent2D swapChainExtent;
         VkSemaphore imageAvailableSemaphore;
         VkSemaphore renderFinishedSemaphore;
         VkFence inFlightFence;
 
         uint32_t imageIndex;
-
-        int internalShaderCount = 2;
-        std::vector<const char*> shaderNameList{
-            "color",
-            "texture"
-        };
-
-        std::vector<VkPipeline> shaderProgramList{
-            VkPipeline {},
-            VkPipeline {}
-        };
-
-        void createAllInternalPipeline();
-        VkShaderModule createShaderModule(const std::vector<char>& code);
-
-        VkDescriptorSetLayout descriptorSetLayout;
-        void createUniformBuffers();
-        void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-
-        VkDescriptorPool descriptorPool;
-        void createDescriptorPool();
-        std::vector<VkDescriptorSet> descriptorSets;
-        void createDescriptorSets();
-
-        struct UniformBufferObject {
-            glm::mat4 model;
-            glm::mat4 view;
-            glm::mat4 proj;
-        };
 	};
 }
 

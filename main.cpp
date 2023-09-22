@@ -10,6 +10,7 @@
 
 #include "include/window.h"
 #include "include/device.h"
+#include "include/pipeline.h"
 
 using namespace SwordR;
 
@@ -35,6 +36,8 @@ int main() {
         return -1;
     }
     
+    auto* graphicsPipeline = new GraphicsPipeline();
+    graphicsPipeline->create(device);
 
     const std::vector<Vertex> vertices = {
         {{-0.5f, -0.5f}, {0, 0}, {1.0f, 0.0f, 0.0f, 1.0f}},
@@ -54,13 +57,15 @@ int main() {
     {
         window->update();
         device->beginFrame();
-        device->draw(vertexBuffer, indexBuffer, 6, Device::InternalShader::Color);
+        device->draw(vertexBuffer, indexBuffer, 6, graphicsPipeline->pipelineLayout, graphicsPipeline->getPipeline(InternalShaderType::Color), graphicsPipeline->descriptorSets);
         // device->draw(vertexBuffer, indexBuffer, 6, Device::InternalShader::Texture);
         device->endFrame();
     }
 
     device->destroyVertexBuffer(vertexBuffer);
     device->destroyIndexBuffer(indexBuffer);
+
+    graphicsPipeline->destroy();
 
     device->destroy();
     delete device;
