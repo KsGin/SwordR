@@ -96,7 +96,9 @@ namespace SwordR
         transitionImageLayout(device, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         imageBufferMap.insert({ textureImage, textureImageMemory });
-        VkImageView textureImageView = createImageView(device, textureImage, VK_FORMAT_R8G8B8A8_SRGB);
+
+        vkDestroyBuffer(device->logicalDevice, imageBuffer, nullptr);
+        vkFreeMemory(device->logicalDevice, textureMemory, nullptr);
 
         return textureImage;
 	}

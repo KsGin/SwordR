@@ -129,7 +129,6 @@ namespace SwordR
         colorBlending.blendConstants[2] = 0.0f; // Optional
         colorBlending.blendConstants[3] = 0.0f; // Optional
 
-
         VkDescriptorSetLayoutBinding cameraUBOLayoutBinding{};
         cameraUBOLayoutBinding.binding = 0;
         cameraUBOLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -144,6 +143,13 @@ namespace SwordR
         modelUBOLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         modelUBOLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
+        VkDescriptorSetLayoutBinding systemUBOLayoutBinding{};
+        systemUBOLayoutBinding.binding = 2;
+        systemUBOLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        systemUBOLayoutBinding.descriptorCount = 1;
+        systemUBOLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        systemUBOLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 
@@ -151,21 +157,21 @@ namespace SwordR
         {
 			case PipelineType::BaseMap : {
                 VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-                samplerLayoutBinding.binding = 2;
+                samplerLayoutBinding.binding = 3;
                 samplerLayoutBinding.descriptorCount = 1;
                 samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 samplerLayoutBinding.pImmutableSamplers = nullptr;
                 samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-                std::array<VkDescriptorSetLayoutBinding, 3> bindings = { cameraUBOLayoutBinding, modelUBOLayoutBinding, samplerLayoutBinding };
-                layoutInfo.bindingCount = 3;
+                std::array<VkDescriptorSetLayoutBinding, 4> bindings = { cameraUBOLayoutBinding, modelUBOLayoutBinding, systemUBOLayoutBinding, samplerLayoutBinding };
+                layoutInfo.bindingCount = 4;
                 layoutInfo.pBindings = bindings.data();
 		        break;
 	        }
 
 			case BaseColor:{
-                std::array<VkDescriptorSetLayoutBinding, 2> bindings = { cameraUBOLayoutBinding, modelUBOLayoutBinding };
-                layoutInfo.bindingCount = 2;
+                std::array<VkDescriptorSetLayoutBinding, 3> bindings = { cameraUBOLayoutBinding, modelUBOLayoutBinding, systemUBOLayoutBinding};
+                layoutInfo.bindingCount = 3;
                 layoutInfo.pBindings = bindings.data();
                 break;
 			}
@@ -246,13 +252,15 @@ namespace SwordR
     }
 
     void Pipeline::createDescriptorPool() {
-        std::array<VkDescriptorPoolSize, 3> poolSizes{};
+        std::array<VkDescriptorPoolSize, 4> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[1].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
-        poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[2].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
+        poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[3].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -282,17 +290,23 @@ namespace SwordR
             cameraUBOInfo.buffer = info.camera->uniformBuffers[i];
             cameraUBOInfo.offset = 0;
             cameraUBOInfo.range = sizeof(Camera::UniformBufferPreFrame);
+
             VkDescriptorBufferInfo modelUBOInfo{};
-            modelUBOInfo.buffer = info.model->uniformBuffers[i];
+            modelUBOInfo.buffer = device->modelUniformBuffers[i];
             modelUBOInfo.offset = 0;
             modelUBOInfo.range = sizeof(Model::UniformBufferPreDraw);
+
+            VkDescriptorBufferInfo deviceUBOInfo{};
+            deviceUBOInfo.buffer = device->deviceUniformBuffers[i];
+            deviceUBOInfo.offset = 0;
+            deviceUBOInfo.range = sizeof(Device::UniformBufferPreFrame);
+
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             imageInfo.imageView = info.texture->imageView;
             imageInfo.sampler = info.texture->sampler;
 
-            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
-
+            std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = descriptorSets[i];
             descriptorWrites[0].dstBinding = 0;
@@ -300,6 +314,7 @@ namespace SwordR
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pBufferInfo = &cameraUBOInfo;
+
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[1].dstSet = descriptorSets[i];
             descriptorWrites[1].dstBinding = 1;
@@ -307,13 +322,22 @@ namespace SwordR
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pBufferInfo = &modelUBOInfo;
+
             descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[2].dstSet = descriptorSets[i];
             descriptorWrites[2].dstBinding = 2;
             descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &imageInfo;
+            descriptorWrites[2].pBufferInfo = &deviceUBOInfo;
+
+            descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[3].dstSet = descriptorSets[i];
+            descriptorWrites[3].dstBinding = 3;
+            descriptorWrites[3].dstArrayElement = 0;
+            descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[3].descriptorCount = 1;
+            descriptorWrites[3].pImageInfo = &imageInfo;
 
             vkUpdateDescriptorSets(device->logicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
@@ -322,7 +346,6 @@ namespace SwordR
     void Pipeline::destroy()
     {
         vkDestroyDescriptorPool(device->logicalDevice, descriptorPool, nullptr);
-        vkDestroyDescriptorSetLayout(device->logicalDevice, descriptorSetLayout, nullptr);
         vkDestroyDescriptorSetLayout(device->logicalDevice, descriptorSetLayout, nullptr);
 
         vkDestroyPipeline(device->logicalDevice, graphicsPipeline, nullptr);

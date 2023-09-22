@@ -56,7 +56,7 @@ int main() {
 
     auto* pipeline = new Pipeline();
     Pipeline::PipelineCreateInfo info{
-        Pipeline::BaseMap, camera, texture, model
+        Pipeline::BaseMap, camera, texture
     };
     pipeline->create(device, info);
 
@@ -71,8 +71,10 @@ int main() {
         device->endFrame();
     }
 
+    device->waitFenceAndReset();
+
     model->destroy();
-    model = nullptr;
+    delete model;
 
     texture->destroy();
     delete texture;

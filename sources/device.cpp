@@ -1,7 +1,9 @@
 #pragma once
 #include "../include/device.h"
 
+#include <chrono>
 #include <stdexcept>
+#include <vulkan/vulkan.hpp>
 
 #include "../include/model.h"
 #include "../include/pipeline.h"
@@ -247,18 +249,43 @@ namespace SwordR {
             throw std::runtime_error("failed to create semaphores!");
         }
 
+        VkDeviceSize bufferSize = sizeof(UniformBufferPreFrame);
+
+        deviceUniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        deviceUniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+        deviceUniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, deviceUniformBuffers[i], deviceUniformBuffersMemory[i]);
+            vkMapMemory(logicalDevice, deviceUniformBuffersMemory[i], 0, bufferSize, 0, &deviceUniformBuffersMapped[i]);
+        }
+
+        VkDeviceSize modelBufferSize = sizeof(Model::UniformBufferPreDraw);
+        modelUniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        modelUniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+        modelUniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            createBuffer(modelBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, modelUniformBuffers[i], modelUniformBuffersMemory[i]);
+            vkMapMemory(logicalDevice, modelUniformBuffersMemory[i], 0, modelBufferSize, 0, &modelUniformBuffersMapped[i]);
+        }
+
+        startTime = std::chrono::high_resolution_clock::now();
         return true;
     }
 
     void Device::destroy() {
-        vkWaitForFences(logicalDevice, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-
         vkDestroySemaphore(logicalDevice, imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(logicalDevice, renderFinishedSemaphore, nullptr);
         vkDestroyFence(logicalDevice, inFlightFence, nullptr);
         vkDestroyCommandPool(logicalDevice, commandPool, nullptr);
         for (auto framebuffer : swapChainFramebuffers) {
             vkDestroyFramebuffer(logicalDevice, framebuffer, nullptr);
+        }
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            vkDestroyBuffer(logicalDevice, deviceUniformBuffers[i], nullptr);
+            vkDestroyBuffer(logicalDevice, modelUniformBuffers[i], nullptr);
+            vkFreeMemory(logicalDevice, deviceUniformBuffersMemory[i], nullptr);
+            vkFreeMemory(logicalDevice, modelUniformBuffersMemory[i], nullptr);
         }
 
         vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
@@ -274,11 +301,11 @@ namespace SwordR {
         vkDestroyInstance(instance, nullptr);
     }
 
-    bool Device::beginFrame() {
+    void Device::beginFrame() {
         vkWaitForFences(logicalDevice, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
         vkResetFences(logicalDevice, 1, &inFlightFence);
 
-        vkAcquireNextImageKHR(logicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        vkAcquireNextImageKHR(logicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphore, nullptr, &imageIndex);
         vkResetCommandBuffer(commandBuffer, 0);
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -314,6 +341,13 @@ namespace SwordR {
         scissor.offset = { 0, 0 };
         scissor.extent = swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+        timeSinceStartup = std::chrono::duration<float, std::chrono::seconds::period>(std::chrono::high_resolution_clock::now() - startTime).count();
+
+        ubo.time = timeSinceStartup;
+        ubo.width = static_cast<float>(swapChainExtent.width);
+        ubo.height = static_cast<float>(swapChainExtent.height);
+        memcpy(deviceUniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
     }
 
     void Device::endFrame() {
@@ -341,14 +375,6 @@ namespace SwordR {
             throw std::runtime_error("failed to submit draw command buffer!");
         }
 
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         presentInfo.waitSemaphoreCount = 1;
@@ -361,11 +387,18 @@ namespace SwordR {
         vkQueuePresentKHR(presentQueue, &presentInfo);
     }
 
-    void Device::draw(Model* model, Pipeline* pipeline) {
-        model->updateModelUBO();
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout, 0, 1, &pipeline->descriptorSets[imageIndex], 0, nullptr);
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
+    void Device::waitFenceAndReset()
+    {
+        vkWaitForFences(logicalDevice, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+        vkResetFences(logicalDevice, 1, &inFlightFence);
+    }
 
+    void Device::draw(Model* model, Pipeline* pipeline) {
+        model->updateModelUBO(timeSinceStartup, modelUniformBuffersMapped);
+
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout, 0, 1, &pipeline->descriptorSets[imageIndex], 0, nullptr);
+
+    	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
         VkBuffer vertexBuffers[] = { model->vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);

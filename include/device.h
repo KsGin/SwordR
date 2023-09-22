@@ -1,7 +1,9 @@
 #pragma once
 
+#include <chrono>
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <array>
 #include <GLFW/glfw3.h>
 
 namespace SwordR
@@ -17,8 +19,9 @@ namespace SwordR
         void draw(Model* model, Pipeline* pipeline);
         bool createWithWindow(GLFWwindow* window, int width, int height);
         void destroy();
-        bool beginFrame();
+        void beginFrame();
         void endFrame();
+        void waitFenceAndReset();
 
 	private:
         void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
@@ -57,6 +60,26 @@ namespace SwordR
 
         uint32_t imageIndex;
         const int MAX_FRAMES_IN_FLIGHT = 2;
+
+        struct UniformBufferPreFrame {
+            float time;
+            float unused;
+            float width;
+            float height;
+        };
+
+        UniformBufferPreFrame ubo{};
+
+        std::vector<VkBuffer> modelUniformBuffers;
+        std::vector<VkDeviceMemory> modelUniformBuffersMemory;
+        std::vector<void*> modelUniformBuffersMapped;
+
+        std::vector<VkBuffer> deviceUniformBuffers;
+        std::vector<VkDeviceMemory> deviceUniformBuffersMemory;
+        std::vector<void*> deviceUniformBuffersMapped;
+
+        std::chrono::time_point<std::chrono::steady_clock> startTime;
+        float timeSinceStartup = 0;
 	};
 }
 

@@ -19,10 +19,6 @@ namespace SwordR
 
         UniformBufferPreDraw ubo{};
 
-        std::vector<VkBuffer> uniformBuffers;
-        std::vector<VkDeviceMemory> uniformBuffersMemory;
-        std::vector<void*> uniformBuffersMapped;
-
         struct Vertex {
             glm::vec2 pos;
             glm::vec2 uv;
@@ -58,7 +54,7 @@ namespace SwordR
         void createIndexBuffer(std::vector<uint16_t> indices);
 
         Device* device;
-        void updateModelUBO();
+        void updateModelUBO(float timeSinceStartup, std::vector<void*>& uniformBuffersMapped);
 	public:
         enum ModelType
         {

@@ -20,7 +20,6 @@ namespace SwordR
             PipelineType type;
             Camera* camera;
             Texture* texture;
-            Model* model;
         };
 
         void create(Device* device, PipelineCreateInfo info);
@@ -42,12 +41,9 @@ namespace SwordR
         VkShaderModule createShaderModule(const std::vector<char>& code);
         VkPipelineLayout pipelineLayout = nullptr;
         std::vector<VkDescriptorSet> descriptorSets;
-
-        VkDescriptorSetLayout descriptorSetLayout;
-
+        VkDescriptorSetLayout descriptorSetLayout {};
         VkDescriptorPool descriptorPool;
         void createDescriptorPool();
         void createDescriptorSets();
-
 	};
 }
