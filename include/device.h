@@ -55,7 +55,7 @@ namespace SwordR
 	class Device
 	{
         friend class GraphicsPipeline;
-        friend class Texture;
+        friend class TextureBuilder;
 
 	public:
         void draw(VkBuffer vertexBuffer, VkBuffer indexBuffer, uint32_t indexCount, VkPipelineLayout layout, VkPipeline pipeline, std::vector<VkDescriptorSet> descriptorSets);

@@ -11,6 +11,7 @@
 #include "include/window.h"
 #include "include/device.h"
 #include "include/pipeline.h"
+#include "include/texture.h"
 
 using namespace SwordR;
 
@@ -35,9 +36,14 @@ int main() {
         delete window;
         return -1;
     }
+
+    auto* textureBuilder = new TextureBuilder();
+    VkImage image = textureBuilder->CreateImageFromPath(device, "textures\\logo.png");
+    VkImageView imageView = textureBuilder->createImageView(device, image, VK_FORMAT_R8G8B8A8_SRGB);
+    VkSampler sampler = textureBuilder->createSampler(device);
     
     auto* graphicsPipeline = new GraphicsPipeline();
-    graphicsPipeline->create(device);
+    graphicsPipeline->create(device, imageView, sampler);
 
     const std::vector<Vertex> vertices = {
         {{-0.5f, -0.5f}, {0, 0}, {1.0f, 0.0f, 0.0f, 1.0f}},
@@ -57,13 +63,18 @@ int main() {
     {
         window->update();
         device->beginFrame();
-        device->draw(vertexBuffer, indexBuffer, 6, graphicsPipeline->pipelineLayout, graphicsPipeline->getPipeline(InternalShaderType::Color), graphicsPipeline->descriptorSets);
+        device->draw(vertexBuffer, indexBuffer, 6, graphicsPipeline->pipelineLayout, graphicsPipeline->getPipeline(InternalShaderType::Texture), graphicsPipeline->descriptorSets);
         // device->draw(vertexBuffer, indexBuffer, 6, Device::InternalShader::Texture);
         device->endFrame();
     }
 
     device->destroyVertexBuffer(vertexBuffer);
     device->destroyIndexBuffer(indexBuffer);
+
+    textureBuilder->releaseSampler(device, sampler);
+    textureBuilder->releaseImageView(device, imageView);
+    textureBuilder->releaseImage(device, image);
+    delete textureBuilder;
 
     graphicsPipeline->destroy();
 

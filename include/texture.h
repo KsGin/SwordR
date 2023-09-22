@@ -2,15 +2,12 @@
 
 #include <string>
 #include <stdexcept>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #include "vulkan/vulkan.h"
 #include "device.h"
 
 namespace SwordR
 {
-	class Texture
+	class TextureBuilder
 	{
 	public:
 		VkImage CreateImageFromPath(Device* device, const char* path);

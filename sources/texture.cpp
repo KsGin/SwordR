@@ -1,8 +1,10 @@
+#pragma once
 #include "../include/texture.h"
-
+#define STB_IMAGE_IMPLEMENTATION
+#include "../include/stb_image.h"
 namespace SwordR
 {
-	VkImage Texture::CreateImageFromPath(Device* device, const char* path) {
+	VkImage TextureBuilder::CreateImageFromPath(Device* device, const char* path) {
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         VkDeviceSize imageSize = texWidth * texHeight * 4;
@@ -84,7 +86,7 @@ namespace SwordR
         return textureImage;
 	}
 
-    VkImageView Texture::createImageView(Device* device, VkImage image, VkFormat format) {
+    VkImageView TextureBuilder::createImageView(Device* device, VkImage image, VkFormat format) {
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewInfo.image = image;
@@ -104,12 +106,12 @@ namespace SwordR
         return imageView;
     }
 
-    void Texture::releaseImageView(Device* device, VkImageView imageView)
+    void TextureBuilder::releaseImageView(Device* device, VkImageView imageView)
     {
         vkDestroyImageView(device->logicalDevice, imageView, nullptr);
     }
 
-    VkSampler Texture::createSampler(Device* device)
+    VkSampler TextureBuilder::createSampler(Device* device)
     {
         VkSampler sampler{};
         VkSamplerCreateInfo samplerInfo{};
@@ -136,17 +138,17 @@ namespace SwordR
         return sampler;
     }
 
-    void Texture::releaseSampler(Device* device, VkSampler sampler)
+    void TextureBuilder::releaseSampler(Device* device, VkSampler sampler)
     {
         vkDestroySampler(device->logicalDevice, sampler, nullptr);
     }
 
-    void Texture::releaseImage(Device* device, VkImage image){
+    void TextureBuilder::releaseImage(Device* device, VkImage image){
         vkFreeMemory(device->logicalDevice, imageBufferMap[image], nullptr);
         vkDestroyImage(device->logicalDevice, image, nullptr);
     }
 
-    void Texture::copyBuffer(Device* device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+    void TextureBuilder::copyBuffer(Device* device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands(device);
 
         VkBufferCopy copyRegion{};
@@ -156,7 +158,7 @@ namespace SwordR
         endSingleTimeCommands(device, commandBuffer);
     }
 
-    VkCommandBuffer Texture::beginSingleTimeCommands(Device* device) {
+    VkCommandBuffer TextureBuilder::beginSingleTimeCommands(Device* device) {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -175,7 +177,7 @@ namespace SwordR
         return commandBuffer;
     }
 
-    void Texture::endSingleTimeCommands(Device* device, VkCommandBuffer commandBuffer) {
+    void TextureBuilder::endSingleTimeCommands(Device* device, VkCommandBuffer commandBuffer) {
         vkEndCommandBuffer(commandBuffer);
 
         VkSubmitInfo submitInfo{};
@@ -189,7 +191,7 @@ namespace SwordR
         vkFreeCommandBuffers(device->logicalDevice, device->commandPool, 1, &commandBuffer);
     }
 
-    void Texture::transitionImageLayout(Device* device, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
+    void TextureBuilder::transitionImageLayout(Device* device, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands(device);
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -239,7 +241,7 @@ namespace SwordR
         endSingleTimeCommands(device, commandBuffer);
     }
 
-    void Texture::copyBufferToImage(Device* device, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
+    void TextureBuilder::copyBufferToImage(Device* device, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands(device);
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
