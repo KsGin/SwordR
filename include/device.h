@@ -1,10 +1,11 @@
 #pragma once
-
+#define GLM
 #include <chrono>
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <array>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 
 namespace SwordR
 {
@@ -74,10 +75,7 @@ namespace SwordR
         const int MAX_FRAMES_IN_FLIGHT = 2;
 
         struct UniformBufferPreFrame {
-            float time;
-            float unused;
-            float width;
-            float height;
+            alignas(16) glm::vec4 param;
         };
 
         UniformBufferPreFrame ubo{};

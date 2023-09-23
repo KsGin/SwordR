@@ -365,9 +365,9 @@ namespace SwordR {
         deltaTime = currentTime - timeSinceStartup;
         timeSinceStartup = currentTime;
 
-        ubo.time = timeSinceStartup;
-        ubo.width = static_cast<float>(swapChainExtent.width);
-        ubo.height = static_cast<float>(swapChainExtent.height);
+        ubo.param.x = timeSinceStartup;
+        ubo.param.z = static_cast<float>(swapChainExtent.width);
+        ubo.param.w = static_cast<float>(swapChainExtent.height);
         memcpy(deviceUniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
     }
 
@@ -465,7 +465,7 @@ namespace SwordR {
         if (vkBeginCommandBuffer(computeCMD, &beginInfo) != VK_SUCCESS) {
             throw std::runtime_error("failed to begin recording command buffer!");
         }
-        particleSystem->updateUBO(deltaTime);
+        particleSystem->updateUBO();
     	vkCmdBindPipeline(computeCMD, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->computePipeline);
         vkCmdBindDescriptorSets(computeCMD, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->computePipelineLayout, 0, 1, &pipeline->computeDescriptorSets[imageIndex], 0, 0);
     	vkCmdDispatch(computeCMD, particleSystem->rowSize / 32, particleSystem->colSize / 32, 1);

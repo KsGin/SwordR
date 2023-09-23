@@ -22,9 +22,10 @@ namespace SwordR
 
 		struct Vertex
 		{
-			glm::vec2 pos;
-			glm::vec2 uv;
-			glm::vec4 color;
+			alignas(16) glm::vec2 pos;
+			alignas(16) glm::vec2 uv;
+			alignas(16) glm::vec4 color;
+			alignas(16) glm::vec4 unused;
 
 			static VkVertexInputBindingDescription getBindingDescription()
 			{

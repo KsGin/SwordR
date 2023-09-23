@@ -12,8 +12,8 @@ namespace SwordR
 
 		struct Vertex
 		{
-			glm::vec2 position;
-			glm::vec4 color;
+			alignas(16) glm::vec4 position;
+			alignas(16) glm::vec4 color;
 
 			static VkVertexInputBindingDescription getBindingDescription()
 			{
@@ -29,7 +29,7 @@ namespace SwordR
 
 				attributeDescriptions[0].binding = 0;
 				attributeDescriptions[0].location = 0;
-				attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+				attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
 				attributeDescriptions[0].offset = offsetof(Particle, position);
 
 				attributeDescriptions[1].binding = 0;
@@ -43,17 +43,15 @@ namespace SwordR
 
 		struct Particle
 		{
-			glm::vec4 position;
-			glm::vec4 velocity;
-			glm::vec4 color;
-			glm::vec4 unused;
+			alignas(16) glm::vec4 position;
+			alignas(16) glm::vec4 velocity;
+			alignas(16) glm::vec4 color;
+			alignas(16) glm::vec4 unused;
 		};
 
 		struct UniformBufferPreDispatch
 		{
-			glm::float32_t deltaTime;
-			glm::uint32_t rowSize;
-			glm::uint32_t colSize;
+			alignas(16) glm::vec4 param;
 		};
 
 		UniformBufferPreDispatch ubo{};
@@ -63,15 +61,15 @@ namespace SwordR
 		std::vector<VkBuffer> shaderStorageBuffers;
 		std::vector<VkDeviceMemory> shaderStorageBuffersMemory;
 
-		const uint32_t rowSize = 512;
-		const uint32_t colSize = 512;
-		const uint32_t particleSize = rowSize * colSize;
+		const float rowSize = 256;
+		const float colSize = 256;
+		const float particleSize = rowSize * colSize;
 
 		Device* device;
 	public:
 
 		void create(Device* device);
 		void destroy();
-		void updateUBO(float deltaTime);
+		void updateUBO();
 	};
 }

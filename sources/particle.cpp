@@ -10,22 +10,9 @@ namespace SwordR
 		shaderStorageBuffers.resize(device->MAX_FRAMES_IN_FLIGHT);
 		shaderStorageBuffersMemory.resize(device->MAX_FRAMES_IN_FLIGHT);
 
-		// Initialize particles
 		std::default_random_engine rndEngine((unsigned)time(nullptr));
 		std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
-
-		// Initial particle positions on a circle
 		std::vector<Particle> particles(particleSize);
-		for (auto& particle : particles) {
-			float r = 12.5f * sqrt(rndDist(rndEngine));
-			float theta = rndDist(rndEngine) * 20 * 3.14159265358979323846;
-			float x = r * cos(theta);
-			float y = r * sin(theta);
-			particle.position = glm::vec4(x * 20, y * 20, 0, 0);
-			particle.velocity = glm::normalize(glm::vec4(x, y, 0, 0)) * 2.5f;
-			particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
-		}
-
 		VkDeviceSize bufferSize = sizeof(Particle) * particleSize;
 		VkBuffer stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
@@ -65,11 +52,12 @@ namespace SwordR
 	}
 
 
-	void ParticleSystem::updateUBO(float deltaTime)
+	void ParticleSystem::updateUBO()
 	{
-		ubo.deltaTime = deltaTime;
-		ubo.rowSize = rowSize;
-		ubo.colSize = colSize;
+		ubo.param.x = device->deltaTime;
+		ubo.param.y = device->timeSinceStartup;
+		ubo.param.z = rowSize;
+		ubo.param.w = colSize;
 		memcpy(uniformBuffersMapped[device->imageIndex], &ubo, sizeof(ubo));
 	}
 }

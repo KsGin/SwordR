@@ -16,8 +16,8 @@ namespace SwordR
 
 		struct UniformBufferPreFrame
 		{
-			glm::mat4 view;
-			glm::mat4 proj;
+			alignas(64) glm::mat4 view;
+			alignas(64) glm::mat4 proj;
 		};
 
 		UniformBufferPreFrame ubo{};
