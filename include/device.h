@@ -20,7 +20,7 @@ namespace SwordR
 	public:
         void draw(Model* model, GraphicsPipeline* pipeline);
         void draw(ParticleSystem* particleSystem, GraphicsPipeline* pipeline);
-        void dispatchCompute(ParticleSystem* particleSystem, ComputePipeline* pipeline);
+        void dispatch(ParticleSystem* particleSystem, ComputePipeline* pipeline);
         bool createWithWindow(GLFWwindow* window, int width, int height);
         void destroy();
         void beginFrame();

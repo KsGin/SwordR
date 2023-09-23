@@ -2,15 +2,15 @@
 
 layout (binding = 0) uniform ParameterUBO {
     float deltaTime;
-    int rowParticleCount;
-    int columnParticleCount;
-    int count;
+    uint rowSize;
+    uint colSize;
 } ubo;
 
 struct Particle {
-    vec2 position;
-    vec2 velocity;
+    vec4 position;
+    vec4 velocity;
     vec4 color;
+    vec4 unused;
 };
 
 layout(std140, binding = 1) readonly buffer ParticleSSBOIn {
@@ -21,13 +21,17 @@ layout(std140, binding = 2) writeonly buffer ParticleSSBOOut {
    Particle particlesOut[ ];
 };
 
-layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 void main() 
 {
     uint xIndex = gl_GlobalInvocationID.x;  
-    Particle particleIn = particlesIn[xIndex];
-    particlesOut[xIndex].position = particleIn.position + particleIn.velocity * ubo.deltaTime + 10;
-    particlesOut[xIndex].velocity = particleIn.velocity;
-    particlesOut[xIndex].color = particleIn.color;
+    uint yIndex = gl_GlobalInvocationID.y;  
+    uint index = xIndex + yIndex * ubo.rowSize;
+    if(index < ubo.rowSize * ubo.colSize) {
+        Particle particleIn = particlesIn[index];
+        particlesOut[index].position = uvec4(xIndex, yIndex, 0, 0);
+        particlesOut[index].velocity = particleIn.velocity;
+        particlesOut[index].color = vec4(1.0, 0.5f ,0.0f,1.0f);
+    }
 }

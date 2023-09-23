@@ -43,17 +43,17 @@ namespace SwordR
 
 		struct Particle
 		{
-			glm::vec2 position;
-			glm::vec2 velocity;
+			glm::vec4 position;
+			glm::vec4 velocity;
 			glm::vec4 color;
+			glm::vec4 unused;
 		};
 
 		struct UniformBufferPreDispatch
 		{
-			float deltaTime;
-			int rowParticleCount;
-			int columnParticleCount;
-			int count;
+			glm::float32_t deltaTime;
+			glm::uint32_t rowSize;
+			glm::uint32_t colSize;
 		};
 
 		UniformBufferPreDispatch ubo{};
@@ -63,9 +63,9 @@ namespace SwordR
 		std::vector<VkBuffer> shaderStorageBuffers;
 		std::vector<VkDeviceMemory> shaderStorageBuffersMemory;
 
-		const int rowParticleCount = 128;
-		const int columnParticleCount = 128;
-		const int maxParticleCount = rowParticleCount * columnParticleCount;
+		const uint32_t rowSize = 512;
+		const uint32_t colSize = 512;
+		const uint32_t particleSize = rowSize * colSize;
 
 		Device* device;
 	public:

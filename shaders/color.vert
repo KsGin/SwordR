@@ -23,7 +23,7 @@ layout(location = 1) in vec4 inColor;
 layout(location = 0) out vec4 fragColor;
 
 void main() {
-    gl_PointSize = 2.2f;
-    gl_Position = cameraUBO.proj * cameraUBO.view * vec4(inPosition, 0.0, 1.0);
+    gl_PointSize = 2.0f;
+    gl_Position = vec4((inPosition.x / deviceUBO.width), (inPosition.y / deviceUBO.height), 0.0, 1.0);
     fragColor = inColor;
 }

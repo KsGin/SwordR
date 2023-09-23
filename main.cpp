@@ -22,8 +22,8 @@ using namespace SwordR;
 int main() {
 
     const char* name = "Vulkan Demo";
-    const int width = 1920;
-    const int height = 1080;
+    const int width = 1024;
+    const int height = 1024;
 
 	auto* window = new Window();
     if (!window->create(name, width, height))
@@ -73,7 +73,7 @@ int main() {
         window->update();
         camera->updateCameraUBO();
 
-        device->dispatchCompute(particleSystem, computePipeline);
+        device->dispatch(particleSystem, computePipeline);
 
         device->beginFrame();
         device->draw(model, modelPipeline);

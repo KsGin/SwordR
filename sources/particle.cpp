@@ -15,18 +15,18 @@ namespace SwordR
 		std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
 
 		// Initial particle positions on a circle
-		std::vector<Particle> particles(maxParticleCount);
+		std::vector<Particle> particles(particleSize);
 		for (auto& particle : particles) {
-			float r = 0.25f * sqrt(rndDist(rndEngine));
-			float theta = rndDist(rndEngine) * 2 * 3.14159265358979323846;
+			float r = 12.5f * sqrt(rndDist(rndEngine));
+			float theta = rndDist(rndEngine) * 20 * 3.14159265358979323846;
 			float x = r * cos(theta);
 			float y = r * sin(theta);
-			particle.position = glm::vec2(x * 5, y * 5);
-			particle.velocity = glm::normalize(glm::vec2(x, y)) * 0.25f;
+			particle.position = glm::vec4(x * 20, y * 20, 0, 0);
+			particle.velocity = glm::normalize(glm::vec4(x, y, 0, 0)) * 2.5f;
 			particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
 		}
 
-		VkDeviceSize bufferSize = sizeof(Particle) * maxParticleCount;
+		VkDeviceSize bufferSize = sizeof(Particle) * particleSize;
 		VkBuffer stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
 		device->createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
@@ -40,8 +40,7 @@ namespace SwordR
 			device->copyBuffer(stagingBuffer, shaderStorageBuffers[i], bufferSize);
 		}
 
-
-		VkDeviceSize uboSize = sizeof(Particle) * maxParticleCount;
+		VkDeviceSize uboSize = sizeof(Particle) * particleSize;
 		uniformBuffers.resize(device->MAX_FRAMES_IN_FLIGHT);
 		uniformBuffersMemory.resize(device->MAX_FRAMES_IN_FLIGHT);
 		uniformBuffersMapped.resize(device->MAX_FRAMES_IN_FLIGHT);
@@ -50,7 +49,6 @@ namespace SwordR
 			vkMapMemory(device->logicalDevice, uniformBuffersMemory[i], 0, uboSize, 0, &uniformBuffersMapped[i]);
 		}
 
-		particles.clear();
 		vkDestroyBuffer(device->logicalDevice, stagingBuffer, nullptr);
 		vkFreeMemory(device->logicalDevice, stagingBufferMemory, nullptr);
 	}
@@ -70,9 +68,8 @@ namespace SwordR
 	void ParticleSystem::updateUBO(float deltaTime)
 	{
 		ubo.deltaTime = deltaTime;
-		ubo.rowParticleCount = device->swapChainExtent.width;
-		ubo.columnParticleCount = device->swapChainExtent.height;
-		ubo.count = maxParticleCount;
+		ubo.rowSize = rowSize;
+		ubo.colSize = colSize;
 		memcpy(uniformBuffersMapped[device->imageIndex], &ubo, sizeof(ubo));
 	}
 }

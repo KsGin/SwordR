@@ -450,10 +450,10 @@ namespace SwordR {
         vkCmdBindPipeline(graphicsCMD, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(graphicsCMD, 0, 1, &particleSystem->shaderStorageBuffers[imageIndex], offsets);
-        vkCmdDraw(graphicsCMD, particleSystem->maxParticleCount, 1, 0, 0);
+        vkCmdDraw(graphicsCMD, particleSystem->particleSize, 1, 0, 0);
     }
 
-    void Device::dispatchCompute(ParticleSystem* particleSystem, ComputePipeline* pipeline)
+    void Device::dispatch(ParticleSystem* particleSystem, ComputePipeline* pipeline)
     {
         vkWaitForFences(logicalDevice, 1, &computeInFlightFence, VK_TRUE, UINT64_MAX);
         vkResetFences(logicalDevice, 1, &computeInFlightFence);
@@ -466,9 +466,9 @@ namespace SwordR {
             throw std::runtime_error("failed to begin recording command buffer!");
         }
         particleSystem->updateUBO(deltaTime);
-        vkCmdBindDescriptorSets(computeCMD, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->computePipelineLayout, 0, 1, &pipeline->computeDescriptorSets[imageIndex], 0, 0);
     	vkCmdBindPipeline(computeCMD, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->computePipeline);
-    	vkCmdDispatch(computeCMD, particleSystem->rowParticleCount / 256, 1, 1);
+        vkCmdBindDescriptorSets(computeCMD, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->computePipelineLayout, 0, 1, &pipeline->computeDescriptorSets[imageIndex], 0, 0);
+    	vkCmdDispatch(computeCMD, particleSystem->rowSize / 32, particleSystem->colSize / 32, 1);
 
     	if (vkEndCommandBuffer(computeCMD) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");

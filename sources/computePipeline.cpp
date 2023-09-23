@@ -99,9 +99,9 @@ namespace SwordR
 			descriptorWrites[0].pBufferInfo = &particleBufferInfo;
 
 			VkDescriptorBufferInfo storageBufferInfoLastFrame{};
-			storageBufferInfoLastFrame.buffer = particleSystem->shaderStorageBuffers[1 - i];
+			storageBufferInfoLastFrame.buffer = particleSystem->shaderStorageBuffers[(i - 1) % device->MAX_FRAMES_IN_FLIGHT];
 			storageBufferInfoLastFrame.offset = 0;
-			storageBufferInfoLastFrame.range = sizeof(ParticleSystem::Particle) * particleSystem->maxParticleCount;
+			storageBufferInfoLastFrame.range = sizeof(ParticleSystem::Particle) * particleSystem->particleSize;
 
 			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[1].dstSet = computeDescriptorSets[i];
@@ -114,7 +114,7 @@ namespace SwordR
 			VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
 			storageBufferInfoCurrentFrame.buffer = particleSystem->shaderStorageBuffers[i];
 			storageBufferInfoCurrentFrame.offset = 0;
-			storageBufferInfoCurrentFrame.range = sizeof(ParticleSystem::Particle) * particleSystem->maxParticleCount;
+			storageBufferInfoCurrentFrame.range = sizeof(ParticleSystem::Particle) * particleSystem->particleSize;
 
 			descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[2].dstSet = computeDescriptorSets[i];
