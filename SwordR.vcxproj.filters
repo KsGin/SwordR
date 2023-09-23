@@ -27,13 +27,19 @@
     <ClInclude Include="include\window.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\pipeline.h">
+    <ClInclude Include="include\graphicsPipeline.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="include\camera.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="include\model.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\computePipeline.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\particle.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,7 +68,7 @@
     <ClCompile Include="sources\window.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="sources\pipeline.cpp">
+    <ClCompile Include="sources\graphicsPipeline.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="sources\camera.cpp">
@@ -71,5 +77,16 @@
     <ClCompile Include="sources\model.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="sources\computePipeline.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\particle.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shaders\particle.comp">
+      <Filter>shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

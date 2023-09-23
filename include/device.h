@@ -10,21 +10,28 @@ namespace SwordR
 {
 	class Device
 	{
-        friend class Pipeline;
+        friend class GraphicsPipeline;
+        friend class ComputePipeline;
         friend class Texture;
         friend class Camera;
         friend class Model;
+        friend class ParticleSystem;
 
 	public:
-        void draw(Model* model, Pipeline* pipeline);
+        void draw(Model* model, GraphicsPipeline* pipeline);
+        void draw(ParticleSystem* particleSystem, GraphicsPipeline* pipeline);
+        void dispatchCompute(ParticleSystem* particleSystem, ComputePipeline* pipeline);
         bool createWithWindow(GLFWwindow* window, int width, int height);
         void destroy();
         void beginFrame();
         void endFrame();
         void waitFenceAndReset();
 
+
 	private:
+        VkShaderModule createShaderModule(const std::vector<char>& code);
         void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+        void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
         std::vector<const char*> deviceExtensions = {
             "VK_KHR_swapchain",
@@ -45,10 +52,12 @@ namespace SwordR
         VkCommandPool commandPool;
         VkQueue graphicsQueue;
         VkQueue presentQueue;
+        VkQueue computeQueue;
         VkExtent2D swapChainExtent;
 
         VkRenderPass renderPass;
-        VkCommandBuffer commandBuffer;
+        VkCommandBuffer graphicsCMD;
+        VkCommandBuffer computeCMD;
 
         std::vector<VkImageView> swapChainImageViews;
         std::vector<VkImage> swapChainImages;
@@ -57,6 +66,9 @@ namespace SwordR
         VkSemaphore imageAvailableSemaphore;
         VkSemaphore renderFinishedSemaphore;
         VkFence inFlightFence;
+
+        VkFence computeInFlightFence;
+        VkSemaphore computeFinishedSemaphore;
 
         uint32_t imageIndex;
         const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -80,6 +92,7 @@ namespace SwordR
 
         std::chrono::time_point<std::chrono::steady_clock> startTime;
         float timeSinceStartup = 0;
+        float deltaTime = 0;
 	};
 }
 

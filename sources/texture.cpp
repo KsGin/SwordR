@@ -165,16 +165,6 @@ namespace SwordR
         vkDestroyImage(device->logicalDevice, image, nullptr);
     }
 
-    void Texture::copyBuffer(Device* device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-        VkCommandBuffer commandBuffer = beginSingleTimeCommands(device);
-
-        VkBufferCopy copyRegion{};
-        copyRegion.size = size;
-        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-        endSingleTimeCommands(device, commandBuffer);
-    }
-
     VkCommandBuffer Texture::beginSingleTimeCommands(Device* device) {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;

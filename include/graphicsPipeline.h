@@ -3,34 +3,34 @@
 
 namespace SwordR
 {
-	class Pipeline
+	class GraphicsPipeline
 	{
         friend class Device;
 	public:
 		
-        enum PipelineType
+        enum GraphicsPipelineType
         {
-            BaseColor = 0,
-            BaseMap = 1
+            ParticleRenderPipeline = 0,
+            ModelRenderPipeline = 1
         };
 
-        struct PipelineCreateInfo
+        struct GraphicsPipelineCreateInfo
         {
         public:
-            PipelineType type;
+            GraphicsPipelineType type;
             Camera* camera;
             Texture* texture;
         };
 
-        void create(Device* device, PipelineCreateInfo info);
+        void create(Device* device, GraphicsPipelineCreateInfo info);
         void destroy();
 
 	private:
         Device* device;
-        PipelineCreateInfo info {};
+        GraphicsPipelineCreateInfo info {};
 
-        int internalShaderCount = 2;
-        std::vector<const char*> shaderNameList{
+        int internalGraphicsCount = 2;
+        std::vector<const char*> graphicsNameList{
             "color",
             "texture"
         };
@@ -38,7 +38,6 @@ namespace SwordR
         VkPipeline graphicsPipeline;
 
         void createPipeline();
-        VkShaderModule createShaderModule(const std::vector<char>& code);
         VkPipelineLayout pipelineLayout = nullptr;
         std::vector<VkDescriptorSet> descriptorSets;
         VkDescriptorSetLayout descriptorSetLayout {};

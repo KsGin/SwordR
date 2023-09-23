@@ -2,11 +2,14 @@
 #include "../include/device.h"
 
 #include <chrono>
+#include <iostream>
 #include <stdexcept>
 #include <vulkan/vulkan.hpp>
 
 #include "../include/model.h"
-#include "../include/pipeline.h"
+#include "../include/graphicsPipeline.h"
+#include "../include/particle.h"
+#include "../include/computePipeline.h"
 
 namespace SwordR {
     bool Device::createWithWindow(GLFWwindow* window, int width, int height)
@@ -51,11 +54,12 @@ namespace SwordR {
         std::vector<VkQueueFamilyProperties> familyProperties(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, familyProperties.data());
 
-        uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
+        uint32_t graphicsAndComputeQueueFamilyIndex = UINT32_MAX;
         uint32_t presentQueueFamilyIndex = UINT32_MAX;
         for (uint32_t i = 0; i < queueFamilyCount; ++i) {
-            if (familyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-                graphicsQueueFamilyIndex = i;
+            // must both supports graphics and compute
+            if ((familyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (familyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT)) {
+                graphicsAndComputeQueueFamilyIndex = i;
             }
         }
 
@@ -63,7 +67,7 @@ namespace SwordR {
         VkDeviceQueueCreateInfo queueCreateInfo{};
         queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queueCreateInfo.queueCount = 1;
-        queueCreateInfo.queueFamilyIndex = graphicsQueueFamilyIndex;
+        queueCreateInfo.queueFamilyIndex = graphicsAndComputeQueueFamilyIndex;
         queueCreateInfo.pQueuePriorities = priorities;
 
         VkDeviceCreateInfo deviceCreateInfo{};
@@ -81,7 +85,7 @@ namespace SwordR {
             return false;
         }
 
-        VkBool32* pSupportsPresent = new VkBool32[queueFamilyCount];
+        auto* pSupportsPresent = new VkBool32[queueFamilyCount];
         for (uint32_t i = 0; i < queueFamilyCount; i++) {
             vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &pSupportsPresent[i]);
         }
@@ -96,15 +100,22 @@ namespace SwordR {
         }
         delete[] pSupportsPresent;
 
-        if (graphicsQueueFamilyIndex == UINT32_MAX || presentQueueFamilyIndex == UINT32_MAX) {
+        if (graphicsAndComputeQueueFamilyIndex == UINT32_MAX || presentQueueFamilyIndex == UINT32_MAX) {
             throw std::runtime_error("graphicsQueueFamilyIndex || presentQueueFamilyIndex ERROR");
             return false;
         }
 
+        // 获取graphics队列，用于基础渲染
+        vkGetDeviceQueue(logicalDevice, graphicsAndComputeQueueFamilyIndex, 0, &graphicsQueue);
+        // 获取compute队列，用于compute
+        vkGetDeviceQueue(logicalDevice, graphicsAndComputeQueueFamilyIndex, 0, &computeQueue);
+        // 获取present队列，用于上屏
+        vkGetDeviceQueue(logicalDevice, presentQueueFamilyIndex, 0, &presentQueue);
+
         VkFormat format = VK_FORMAT_B8G8R8A8_UNORM;
         VkSurfaceCapabilitiesKHR surfCapabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfCapabilities);
-        swapChainExtent = VkExtent2D{ (uint32_t)width, (uint32_t)height };
+        swapChainExtent = VkExtent2D{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
         VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
         swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -125,15 +136,12 @@ namespace SwordR {
         swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         swapChainCreateInfo.queueFamilyIndexCount = 0;
         swapChainCreateInfo.pQueueFamilyIndices = nullptr;
-        uint32_t queueFamilyIndices[2] = { (uint32_t)graphicsQueueFamilyIndex, (uint32_t)graphicsQueueFamilyIndex };
-        if (graphicsQueueFamilyIndex != presentQueueFamilyIndex) {
+        uint32_t queueFamilyIndices[2] = { (uint32_t)graphicsAndComputeQueueFamilyIndex, (uint32_t)graphicsAndComputeQueueFamilyIndex };
+        if (graphicsAndComputeQueueFamilyIndex != presentQueueFamilyIndex) {
             swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
             swapChainCreateInfo.queueFamilyIndexCount = 2;
             swapChainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
         }
-
-        vkGetDeviceQueue(logicalDevice, queueFamilyIndices[0], 0, &graphicsQueue);
-        vkGetDeviceQueue(logicalDevice, queueFamilyIndices[1], 0, &presentQueue);
 
         if (vkCreateSwapchainKHR(logicalDevice, &swapChainCreateInfo, nullptr, &swapChain) != VK_SUCCESS)
         {
@@ -221,7 +229,7 @@ namespace SwordR {
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        poolInfo.queueFamilyIndex = graphicsQueueFamilyIndex;
+        poolInfo.queueFamilyIndex = graphicsAndComputeQueueFamilyIndex;
         if (vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create command pool!");
         }
@@ -232,7 +240,11 @@ namespace SwordR {
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = 1;
 
-        if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, &graphicsCMD) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate command buffers!");
+        }
+
+        if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, &computeCMD) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
         }
 
@@ -247,6 +259,11 @@ namespace SwordR {
             vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
             vkCreateFence(logicalDevice, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS) {
             throw std::runtime_error("failed to create semaphores!");
+        }
+
+        if (vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &computeFinishedSemaphore) != VK_SUCCESS ||
+            vkCreateFence(logicalDevice, &fenceInfo, nullptr, &computeInFlightFence) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create compute synchronization objects for a frame!");
         }
 
         VkDeviceSize bufferSize = sizeof(UniformBufferPreFrame);
@@ -273,6 +290,8 @@ namespace SwordR {
     }
 
     void Device::destroy() {
+        vkDestroySemaphore(logicalDevice, computeFinishedSemaphore, nullptr);
+        vkDestroyFence(logicalDevice, computeInFlightFence, nullptr);
         vkDestroySemaphore(logicalDevice, imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(logicalDevice, renderFinishedSemaphore, nullptr);
         vkDestroyFence(logicalDevice, inFlightFence, nullptr);
@@ -306,13 +325,13 @@ namespace SwordR {
         vkResetFences(logicalDevice, 1, &inFlightFence);
 
         vkAcquireNextImageKHR(logicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphore, nullptr, &imageIndex);
-        vkResetCommandBuffer(commandBuffer, 0);
+        vkResetCommandBuffer(graphicsCMD, 0);
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = 0; // Optional
         beginInfo.pInheritanceInfo = nullptr; // Optional
 
-        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        if (vkBeginCommandBuffer(graphicsCMD, &beginInfo) != VK_SUCCESS) {
             throw std::runtime_error("failed to begin recording command buffer!");
         }
 
@@ -327,7 +346,7 @@ namespace SwordR {
         renderPassBeginInfo.clearValueCount = 1;
         renderPassBeginInfo.pClearValues = &clearColor;
 
-        vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(graphicsCMD, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
@@ -335,14 +354,16 @@ namespace SwordR {
         viewport.height = static_cast<float>(swapChainExtent.height);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+        vkCmdSetViewport(graphicsCMD, 0, 1, &viewport);
 
         VkRect2D scissor{};
         scissor.offset = { 0, 0 };
         scissor.extent = swapChainExtent;
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        vkCmdSetScissor(graphicsCMD, 0, 1, &scissor);
 
-        timeSinceStartup = std::chrono::duration<float, std::chrono::seconds::period>(std::chrono::high_resolution_clock::now() - startTime).count();
+        const float currentTime = std::chrono::duration<float, std::chrono::seconds::period>(std::chrono::high_resolution_clock::now() - startTime).count();
+        deltaTime = currentTime - timeSinceStartup;
+        timeSinceStartup = currentTime;
 
         ubo.time = timeSinceStartup;
         ubo.width = static_cast<float>(swapChainExtent.width);
@@ -351,21 +372,21 @@ namespace SwordR {
     }
 
     void Device::endFrame() {
-        vkCmdEndRenderPass(commandBuffer);
-        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        vkCmdEndRenderPass(graphicsCMD);
+        if (vkEndCommandBuffer(graphicsCMD) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
         }
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount = 1;
+        VkSemaphore waitSemaphores[] = { computeFinishedSemaphore, imageAvailableSemaphore };
+        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        submitInfo.waitSemaphoreCount = 2;
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
+        submitInfo.pCommandBuffers = &graphicsCMD;
 
         VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
         submitInfo.signalSemaphoreCount = 1;
@@ -387,25 +408,83 @@ namespace SwordR {
         vkQueuePresentKHR(presentQueue, &presentInfo);
     }
 
+    VkShaderModule Device::createShaderModule(const std::vector<char>& code) {
+        VkShaderModuleCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        createInfo.codeSize = code.size();
+        createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+        VkShaderModule shaderModule;
+        if (vkCreateShaderModule(logicalDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create shader module!");
+        }
+
+        return shaderModule;
+    }
+
     void Device::waitFenceAndReset()
     {
+        vkWaitForFences(logicalDevice, 1, &computeInFlightFence, VK_TRUE, UINT64_MAX);
+        vkResetFences(logicalDevice, 1, &computeInFlightFence);
         vkWaitForFences(logicalDevice, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
         vkResetFences(logicalDevice, 1, &inFlightFence);
     }
 
-    void Device::draw(Model* model, Pipeline* pipeline) {
+    void Device::draw(Model* model, GraphicsPipeline* pipeline) {
         model->updateModelUBO(timeSinceStartup, modelUniformBuffersMapped);
 
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout, 0, 1, &pipeline->descriptorSets[imageIndex], 0, nullptr);
+        vkCmdBindDescriptorSets(graphicsCMD, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout, 0, 1, &pipeline->descriptorSets[imageIndex], 0, nullptr);
 
-    	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
+    	vkCmdBindPipeline(graphicsCMD, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
         VkBuffer vertexBuffers[] = { model->vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(commandBuffer, model->indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(graphicsCMD, 0, 1, vertexBuffers, offsets);
+        vkCmdBindIndexBuffer(graphicsCMD, model->indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-        vkCmdDrawIndexed(commandBuffer, model->getIndexCount(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(graphicsCMD, model->getIndexCount(), 1, 0, 0, 0);
     }
+
+    void Device::draw(ParticleSystem* particleSystem, GraphicsPipeline* pipeline)
+    {
+        vkCmdBindDescriptorSets(graphicsCMD, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout, 0, 1, &pipeline->descriptorSets[imageIndex], 0, nullptr);
+        vkCmdBindPipeline(graphicsCMD, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
+        VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(graphicsCMD, 0, 1, &particleSystem->shaderStorageBuffers[imageIndex], offsets);
+        vkCmdDraw(graphicsCMD, particleSystem->maxParticleCount, 1, 0, 0);
+    }
+
+    void Device::dispatchCompute(ParticleSystem* particleSystem, ComputePipeline* pipeline)
+    {
+        vkWaitForFences(logicalDevice, 1, &computeInFlightFence, VK_TRUE, UINT64_MAX);
+        vkResetFences(logicalDevice, 1, &computeInFlightFence);
+
+        vkResetCommandBuffer(computeCMD, 0);
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        if (vkBeginCommandBuffer(computeCMD, &beginInfo) != VK_SUCCESS) {
+            throw std::runtime_error("failed to begin recording command buffer!");
+        }
+        particleSystem->updateUBO(deltaTime);
+        vkCmdBindDescriptorSets(computeCMD, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->computePipelineLayout, 0, 1, &pipeline->computeDescriptorSets[imageIndex], 0, 0);
+    	vkCmdBindPipeline(computeCMD, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->computePipeline);
+    	vkCmdDispatch(computeCMD, particleSystem->rowParticleCount / 256, 1, 1);
+
+    	if (vkEndCommandBuffer(computeCMD) != VK_SUCCESS) {
+            throw std::runtime_error("failed to record command buffer!");
+        }
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &computeCMD;
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &computeFinishedSemaphore;
+        if (vkQueueSubmit(computeQueue, 1, &submitInfo, computeInFlightFence) != VK_SUCCESS) {
+            throw std::runtime_error("failed to submit compute command buffer!");
+        }
+    }
+
 
     void Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
@@ -431,6 +510,39 @@ namespace SwordR {
         }
 
         vkBindBufferMemory(logicalDevice, buffer, bufferMemory, 0);
+    }
+
+
+    void Device::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandPool = commandPool;
+        allocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer commandBuffer;
+        vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+        VkBufferCopy copyRegion{};
+        copyRegion.size = size;
+        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+        vkEndCommandBuffer(commandBuffer);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+
+        vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(graphicsQueue);
+
+        vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer);
     }
 
     uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {

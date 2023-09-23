@@ -22,26 +22,43 @@
     <ClInclude Include="include\camera.h" />
     <ClInclude Include="include\device.h" />
     <ClInclude Include="include\model.h" />
-    <ClInclude Include="include\pipeline.h" />
+    <ClInclude Include="include\computePipeline.h" />
+    <ClInclude Include="include\graphicsPipeline.h" />
+    <ClInclude Include="include\particle.h" />
     <ClInclude Include="include\stb_image.h" />
     <ClInclude Include="include\texture.h" />
     <ClInclude Include="include\utils.h" />
     <ClInclude Include="include\window.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\color.frag" />
-    <None Include="shaders\color.vert" />
-    <None Include="shaders\texture.frag" />
-    <None Include="shaders\texture.vert" />
+    <None Include="shaders\color.frag">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="shaders\color.vert">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="shaders\texture.frag">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="shaders\texture.vert">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="sources\camera.cpp" />
     <ClCompile Include="sources\device.cpp" />
     <ClCompile Include="sources\model.cpp" />
-    <ClCompile Include="sources\pipeline.cpp" />
+    <ClCompile Include="sources\computePipeline.cpp" />
+    <ClCompile Include="sources\graphicsPipeline.cpp" />
+    <ClCompile Include="sources\particle.cpp" />
     <ClCompile Include="sources\texture.cpp" />
     <ClCompile Include="sources\window.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shaders\particle.comp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

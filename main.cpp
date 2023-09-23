@@ -10,10 +10,12 @@
 
 #include "include/window.h"
 #include "include/device.h"
-#include "include/pipeline.h"
+#include "include/GraphicsPipeline.h"
 #include "include/texture.h"
 #include "include/camera.h"
 #include "include/model.h"
+#include "include/computePipeline.h"
+#include "include/particle.h"
 
 using namespace SwordR;
 
@@ -54,24 +56,38 @@ int main() {
     auto* model = new Model();
     model->create(device, Model::Quad);
 
-    auto* pipeline = new Pipeline();
-    Pipeline::PipelineCreateInfo info{
-        Pipeline::BaseMap, camera, texture
-    };
-    pipeline->create(device, info);
+    auto* modelPipeline = new GraphicsPipeline();
+    modelPipeline->create(device, { GraphicsPipeline::ModelRenderPipeline , camera , texture });
+
+    auto* particleSystem = new ParticleSystem();
+    particleSystem->create(device);
+
+    auto* computePipeline = new ComputePipeline();
+    computePipeline->create(device, particleSystem);
+
+    auto* particlePipeline = new GraphicsPipeline();
+    particlePipeline->create(device, { GraphicsPipeline::ParticleRenderPipeline, camera });
 
     while (!window->windowShouldClose())
     {
         window->update();
-        // set camera ubo pre frame
         camera->updateCameraUBO();
 
+        device->dispatchCompute(particleSystem, computePipeline);
+
         device->beginFrame();
-        device->draw(model, pipeline);
+        device->draw(model, modelPipeline);
+        device->draw(particleSystem, particlePipeline);
         device->endFrame();
     }
 
     device->waitFenceAndReset();
+
+    particleSystem->destroy();
+    delete particleSystem;
+
+    computePipeline->destroy();
+    delete computePipeline;
 
     model->destroy();
     delete model;
@@ -82,8 +98,11 @@ int main() {
     camera->destroy();
     delete camera;
 
-    pipeline->destroy();
-    delete pipeline;
+    particlePipeline->destroy();
+    delete particlePipeline;
+
+    modelPipeline->destroy();
+    delete modelPipeline;
 
     device->destroy();
     delete device;
