@@ -34,6 +34,6 @@ void main()
 
         particlesOut[index].position = vec4(x, y, 1, 1);
         particlesOut[index].velocity = particleIn.velocity;
-        particlesOut[index].color = vec4(cos(time) / 2 + 0.5f,0,cos(time) / 2 + 0.5f + sin(time) / 2 + 0.5f, 0.25f);
+        particlesOut[index].color = vec4(cos(time) / 2 + 0.5f,0,cos(time) / 2 + 0.5f + sin(time) / 2 + 0.5f, 0.35f);
     }
 }
