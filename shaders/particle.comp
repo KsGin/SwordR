@@ -23,24 +23,69 @@ layout (binding = 3, rgba8) uniform readonly image2D inputImage;
 
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
+float random(float n){
+    return fract(sin(n) * 43758.5453123);
+}
+
 void main() 
 {
     uint xIndex = gl_GlobalInvocationID.x;  
     uint yIndex = gl_GlobalInvocationID.y;  
     uint index = xIndex + yIndex * uint(ubo.param.z);
-    if(index < uint(ubo.param.z) * uint(ubo.param.w) + 10) {
+    if(index < uint(ubo.param.z) * uint(ubo.param.w)) {
         Particle particleIn = particlesIn[index];
         float x = xIndex / ubo.param.z * 0.9f + 0.05f;
         float y = yIndex / ubo.param.w * 1.8f + 0.05f;
         float time = ubo.param.y + 1.0f;
-        
-        particlesOut[index].position = vec4(x, y, 1, 1);
-        particlesOut[index].velocity = particleIn.velocity;
-        particlesOut[index].color = vec4(cos(time) / 2 + 0.5f,0,cos(time) / 2 + 0.5f + sin(time) / 2 + 0.5f, 0.35f);
-
-        vec4 imageColor = imageLoad(inputImage, ivec2(x*2000, y*2000)).rgba;
-        if(imageColor.r > 0.1){
-            particlesOut[index].color.rba = imageColor.rba;
+                   
+        vec4 velocity = particleIn.velocity;
+        if (velocity.w < 0.5f) {
+            float xDir = (0.5 - x);
+            if (xDir < 0.01f && xDir >= 0.0f) xDir = 0.01f;
+            if (xDir > -0.01f && xDir <= 0.0f) xDir = -0.01f;
+            float yDir = (0.5 - y);
+            if (yDir < 0.01f && yDir >= 0.0f) yDir = 0.01f;
+            if (yDir > -0.01f && yDir <= 0.0f) yDir = -0.01f;
+            velocity.x = random(x / y) * 5 * xDir;
+            velocity.y = random(y / x) * 5 * yDir;
+            velocity.z = 1;
+            velocity.w = 1;
         }
+
+        vec4 position = particleIn.position;
+        vec4 color = particleIn.color;
+        if (position.w < 0.5f) {
+            vec4 imageColor = imageLoad(inputImage, ivec2(x * 2000, y * 2000)).rgba;
+            position = vec4(x, y, 0, 0) + vec4(velocity.xy * 10, 10, 1);
+            if(imageColor.a > 0.01f){
+                color.r = imageColor.b;
+                // color.g = imageColor.g; 
+                color.g = 0;
+                color.b = imageColor.b;
+                color.a = 0.8f;
+            } else {
+                color.r = 0;
+                color.g = 0;
+                color.b = 0;
+                color.a = 0;
+            }
+        }
+
+        if (position.z > 0.0f){
+            vec2 deltaPos = velocity.xy * ubo.param.x;
+            position = position - vec4(deltaPos, ubo.param.x, 0);
+        } else {
+            if(color.a > 0.1f) {
+                color = vec4(cos(time) / 2 + 0.5f, 0, cos(time) / 2 + 0.5f + sin(time) / 2 + 0.5f, 1);
+                vec4 imageColor = imageLoad(inputImage, ivec2(position.xy * 2000)).rgba;
+                if (imageColor.a > 0.1f) {
+                    color.rb += imageColor.rb;
+                }
+            }
+        }
+        
+        particlesOut[index].color = color;
+        particlesOut[index].velocity = velocity;
+        particlesOut[index].position = position;
     }
 }
