@@ -27,6 +27,8 @@ namespace SwordR
 		std::vector<void*> uniformBuffersMapped;
 
 	public:
+		enum ViewType { Orthographic, Perspective};
+		ViewType viewType = Perspective;
 
 		glm::vec3 position {0,0,2};
 		glm::vec3 lookAt {0,0,0};
@@ -34,6 +36,10 @@ namespace SwordR
 		float near = 0.01f;
 		float far = 100.0f;
 		float aspect = 1.78f;
+		float left = -100.0f;
+		float right = 100.0f;
+		float top = 100.0f;
+		float bottom = -100.0f;
 		void create(Device* device);
 		void updateCameraUBO();
 		void destroy();

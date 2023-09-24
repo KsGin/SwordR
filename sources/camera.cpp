@@ -19,7 +19,14 @@ namespace SwordR
 	void Camera::updateCameraUBO()
 	{
 		ubo.view = glm::lookAt(position, lookAt, glm::vec3(0, 1, 0));
-		ubo.proj = glm::perspective(fov, aspect, near, far);
+		if (viewType == Perspective)
+		{
+			ubo.proj = glm::perspective(fov, aspect, near, far);
+		}
+		else
+		{
+			ubo.proj = glm::ortho(left, right, bottom, top, near, far);
+		}
 
 		memcpy(uniformBuffersMapped[device->imageIndex], &ubo, sizeof(ubo));
 	}

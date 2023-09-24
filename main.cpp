@@ -43,18 +43,20 @@ int main() {
 
     auto* camera = new Camera();
     camera->create(device);
-    camera->position = glm::vec3(0, 0, 1.5f);
+    camera->position = glm::vec3(0, 0, 2);
     camera->lookAt = glm::vec3(0, 0, 0);
     camera->aspect = static_cast<float>(width) / height;
-    camera->fov = 45;
+    camera->fov = 90;
     camera->near = 0.01f;
     camera->far = 100;
 
     auto* model = new Model();
     model->create(device, Model::Quad);
+    model->transform.position = glm::vec3(0, 0, 0);
+    model->transform.scale = glm::vec3(6, 6, 6);
 
     auto* graphicsTexture = new Texture();
-    graphicsTexture->create(device, { "textures\\logo.png", VK_FORMAT_R8G8B8A8_SRGB, Texture::Graphics });
+    graphicsTexture->create(device, { "textures\\logo.png", VK_FORMAT_R8G8B8A8_UNORM, Texture::Graphics });
 
     auto* modelGraphicsPipeline = new GraphicsPipeline();
     modelGraphicsPipeline->create(device, { GraphicsPipeline::ModelRenderPipeline , camera , graphicsTexture });
@@ -73,11 +75,12 @@ int main() {
 
     while (!window->windowShouldClose())
     {
-        window->update();
+        //model->transform.rotation = glm::vec3(0, device->timeSinceStartup * 1, 0);
+
+    	window->update();
         camera->updateCameraUBO();
 
         device->dispatch(particleSystem, particleComputePipeline);
-
         device->beginFrame();
         device->draw(model, modelGraphicsPipeline);
         device->draw(particleSystem, particleGraphicsPipeline);

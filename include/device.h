@@ -28,6 +28,7 @@ namespace SwordR
         void endFrame();
         void waitFenceAndReset();
 
+        float timeSinceStartup = 0;
 
 	private:
         VkShaderModule createShaderModule(const std::vector<char>& code);
@@ -89,7 +90,6 @@ namespace SwordR
         std::vector<void*> deviceUniformBuffersMapped;
 
         std::chrono::time_point<std::chrono::steady_clock> startTime;
-        float timeSinceStartup = 0;
         float deltaTime = 0;
 	};
 }

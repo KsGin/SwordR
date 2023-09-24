@@ -29,6 +29,8 @@ float random(float n){
 
 void main() 
 {
+    if (ubo.param.y < 10) return; // 10ÃëºóÆô¶¯
+
     uint xIndex = gl_GlobalInvocationID.x;  
     uint yIndex = gl_GlobalInvocationID.y;  
     uint index = xIndex + yIndex * uint(ubo.param.z);
@@ -40,10 +42,10 @@ void main()
                    
         vec4 velocity = particleIn.velocity;
         if (velocity.w < 0.5f) {
-            float xDir = (0.5 - x);
+            float xDir = (x - 0.5);
             if (xDir < 0.01f && xDir >= 0.0f) xDir = 0.01f;
             if (xDir > -0.01f && xDir <= 0.0f) xDir = -0.01f;
-            float yDir = (0.5 - y);
+            float yDir = (y - 0.5);
             if (yDir < 0.01f && yDir >= 0.0f) yDir = 0.01f;
             if (yDir > -0.01f && yDir <= 0.0f) yDir = -0.01f;
             velocity.x = random(x / y) * 5 * xDir;
@@ -55,14 +57,14 @@ void main()
         vec4 position = particleIn.position;
         vec4 color = particleIn.color;
         if (position.w < 0.5f) {
+            position = vec4(x, y, 0, 0) + vec4(velocity.xy * 20, 20, 1);
+
             vec4 imageColor = imageLoad(inputImage, ivec2(x * 2000, y * 2000)).rgba;
-            position = vec4(x, y, 0, 0) + vec4(velocity.xy * 10, 10, 1);
             if(imageColor.a > 0.01f){
-                color.r = imageColor.b;
-                // color.g = imageColor.g; 
-                color.g = 0;
-                color.b = imageColor.b;
-                color.a = 0.8f;
+                color.r = min(random(position.x) + 0.5f , 1.0f);
+                color.g = 0.0f;
+                color.b = min(random(position.y) + 0.5f, 1.0f);
+                color.a = 0.2f;
             } else {
                 color.r = 0;
                 color.g = 0;
@@ -72,8 +74,8 @@ void main()
         }
 
         if (position.z > 0.0f){
-            vec2 deltaPos = velocity.xy * ubo.param.x;
-            position = position - vec4(deltaPos, ubo.param.x, 0);
+            vec2 deltaPos = velocity.xy * ubo.param.x * 2;
+            position = position - vec4(deltaPos, ubo.param.x * 2, 0);
         } else {
             if(color.a > 0.1f) {
                 color = vec4(cos(time) / 2 + 0.5f, 0, cos(time) / 2 + 0.5f + sin(time) / 2 + 0.5f, 1);
@@ -81,6 +83,8 @@ void main()
                 if (imageColor.a > 0.1f) {
                     color.rb += imageColor.rb;
                 }
+                color.a += ubo.param.x / 10;
+                color.a = min(color.a , 1.0f);
             }
         }
         
