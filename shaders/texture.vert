@@ -26,6 +26,6 @@ layout(location = 1) out vec2 fragUV;
 
 void main() {
     gl_Position = cameraUBO.proj * cameraUBO.view * modelUBO.model * vec4(inPosition, 1.0);
-    fragColor = vec4(cos(deviceUBO.time) / 2 + 0.5f, 0, cos(deviceUBO.time) / 2 + 0.5f + sin(deviceUBO.time) / 2 + 0.5f, max(1 - (deviceUBO.time / 40) - 0.5 , 0.0f));
+    fragColor = vec4(cos(deviceUBO.time) / 2 + 0.8f, 0, cos(deviceUBO.time) / 2 + 0.8f + sin(deviceUBO.time) / 2 + 0.8f, pow(max(1 - (deviceUBO.time / 40) , 0.0f), 4));
     fragUV = inUV;
 }

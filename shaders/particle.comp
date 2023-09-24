@@ -64,7 +64,7 @@ void main()
                 color.r = min(random(position.x) + 0.5f , 1.0f);
                 color.g = 0.0f;
                 color.b = min(random(position.y) + 0.5f, 1.0f);
-                color.a = 0.2f;
+                color.a = 0.3f;
             } else {
                 color.r = 0;
                 color.g = 0;
@@ -78,13 +78,13 @@ void main()
             position = position - vec4(deltaPos, ubo.param.x * 2, 0);
         } else {
             if(color.a > 0.1f) {
-                color = vec4(cos(time) / 2 + 0.5f, 0, cos(time) / 2 + 0.5f + sin(time) / 2 + 0.5f, 1);
+                color = vec4(cos(time) / 2 + 1, 0, sin(time) / 2 + 1 , 1);
                 vec4 imageColor = imageLoad(inputImage, ivec2(position.xy * 2000)).rgba;
                 if (imageColor.a > 0.1f) {
                     color.rb += imageColor.rb;
                 }
                 color.a += ubo.param.x / 10;
-                color.a = min(color.a , 1.0f);
+                color.a = min(color.a , 0.8f);
             }
         }
         
