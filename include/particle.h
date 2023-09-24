@@ -61,8 +61,8 @@ namespace SwordR
 		std::vector<VkBuffer> shaderStorageBuffers;
 		std::vector<VkDeviceMemory> shaderStorageBuffersMemory;
 
-		const float rowSize = 256;
-		const float colSize = 512;
+		const float rowSize = 960;
+		const float colSize = 1200;
 		const float particleSize = rowSize * colSize;
 
 		Device* device;

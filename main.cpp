@@ -22,8 +22,8 @@ using namespace SwordR;
 int main() {
 
     const char* name = "Vulkan Demo";
-    const int width = 1024;
-    const int height = 1024;
+    const int width = 3840;
+    const int height = 2400;
 
 	auto* window = new Window();
     if (!window->create(name, width, height))

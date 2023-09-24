@@ -27,7 +27,7 @@ namespace SwordR
 
 		if (windowPtr == nullptr)
 		{
-			windowPtr = glfwCreateWindow(width, height, windowName, nullptr, nullptr);
+			windowPtr = glfwCreateWindow(width, height, windowName, glfwGetPrimaryMonitor(), nullptr);
 		}
 		return true;
 	}

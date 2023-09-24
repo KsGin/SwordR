@@ -60,7 +60,7 @@ void main()
             position = vec4(x, y, 0, 0) + vec4(velocity.xy * 20, 20, 1);
 
             vec4 imageColor = imageLoad(inputImage, ivec2(x * 2000, y * 2000)).rgba;
-            if(imageColor.a > 0.01f){
+            if(imageColor.a > 0.2f){
                 color.r = min(random(position.x) + 0.5f , 1.0f);
                 color.g = 0.0f;
                 color.b = min(random(position.y) + 0.5f, 1.0f);
@@ -80,7 +80,7 @@ void main()
             if(color.a > 0.1f) {
                 color = vec4(cos(time) / 2 + 1, 0, sin(time) / 2 + 1 , 1);
                 vec4 imageColor = imageLoad(inputImage, ivec2(position.xy * 2000)).rgba;
-                if (imageColor.a > 0.1f) {
+                if (imageColor.a > 0.3f) {
                     color.rb += imageColor.rb;
                 }
                 color.a += ubo.param.x / 10;
