@@ -58,7 +58,9 @@ namespace SwordR {
         uint32_t presentQueueFamilyIndex = UINT32_MAX;
         for (uint32_t i = 0; i < queueFamilyCount; ++i) {
             // must both supports graphics and compute
-            if ((familyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (familyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT)) {
+            if ((familyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) 
+                && (familyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT)) 
+            {
                 graphicsAndComputeQueueFamilyIndex = i;
             }
         }

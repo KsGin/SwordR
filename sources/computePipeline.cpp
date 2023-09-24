@@ -6,7 +6,7 @@
 
 namespace SwordR
 {
-	void ComputePipeline::create(Device* device, ParticleSystem* particleSystem)
+	void ComputePipeline::create(Device* device, ComputePipelineCreateInfo info)
 	{
 		this->device = device;
 
@@ -26,7 +26,7 @@ namespace SwordR
 		computeShaderStageInfo.module = computeShaderModule;
 		computeShaderStageInfo.pName = "main";
 
-		std::array<VkDescriptorSetLayoutBinding, 3> layoutBindings{};
+		std::array<VkDescriptorSetLayoutBinding, 4> layoutBindings{};
 		layoutBindings[0].binding = 0;
 		layoutBindings[0].descriptorCount = 1;
 		layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -45,22 +45,30 @@ namespace SwordR
 		layoutBindings[2].pImmutableSamplers = nullptr;
 		layoutBindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
+		layoutBindings[3].binding = 3;
+		layoutBindings[3].descriptorCount = 1;
+		layoutBindings[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		layoutBindings[3].pImmutableSamplers = nullptr;
+		layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = 3;
+		layoutInfo.bindingCount = 4;
 		layoutInfo.pBindings = layoutBindings.data();
 
 		if (vkCreateDescriptorSetLayout(device->logicalDevice, &layoutInfo, nullptr, &computeDescriptorSetLayout) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create compute descriptor set layout!");
 		}
 
-		std::array<VkDescriptorPoolSize, 3> poolSizes{};
+		std::array<VkDescriptorPoolSize, 4> poolSizes{};
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		poolSizes[0].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		poolSizes[1].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
 		poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		poolSizes[2].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
+		poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		poolSizes[3].descriptorCount = static_cast<uint32_t>(device->MAX_FRAMES_IN_FLIGHT);
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -85,11 +93,11 @@ namespace SwordR
 
 		for (size_t i = 0; i < device->MAX_FRAMES_IN_FLIGHT; i++) {
 			VkDescriptorBufferInfo particleBufferInfo{};
-			particleBufferInfo.buffer = particleSystem->uniformBuffers[i];
+			particleBufferInfo.buffer = info.particle->uniformBuffers[i];
 			particleBufferInfo.offset = 0;
 			particleBufferInfo.range = sizeof(ParticleSystem::UniformBufferPreDispatch);
 
-			std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+			std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
 			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[0].dstSet = computeDescriptorSets[i];
 			descriptorWrites[0].dstBinding = 0;
@@ -99,9 +107,9 @@ namespace SwordR
 			descriptorWrites[0].pBufferInfo = &particleBufferInfo;
 
 			VkDescriptorBufferInfo storageBufferInfoLastFrame{};
-			storageBufferInfoLastFrame.buffer = particleSystem->shaderStorageBuffers[(i - 1) % device->MAX_FRAMES_IN_FLIGHT];
+			storageBufferInfoLastFrame.buffer = info.particle->shaderStorageBuffers[(i - 1) % device->MAX_FRAMES_IN_FLIGHT];
 			storageBufferInfoLastFrame.offset = 0;
-			storageBufferInfoLastFrame.range = sizeof(ParticleSystem::Particle) * particleSystem->particleSize;
+			storageBufferInfoLastFrame.range = sizeof(ParticleSystem::Particle) * info.particle->particleSize;
 
 			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[1].dstSet = computeDescriptorSets[i];
@@ -112,9 +120,9 @@ namespace SwordR
 			descriptorWrites[1].pBufferInfo = &storageBufferInfoLastFrame;
 
 			VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
-			storageBufferInfoCurrentFrame.buffer = particleSystem->shaderStorageBuffers[i];
+			storageBufferInfoCurrentFrame.buffer = info.particle->shaderStorageBuffers[i];
 			storageBufferInfoCurrentFrame.offset = 0;
-			storageBufferInfoCurrentFrame.range = sizeof(ParticleSystem::Particle) * particleSystem->particleSize;
+			storageBufferInfoCurrentFrame.range = sizeof(ParticleSystem::Particle) * info.particle->particleSize;
 
 			descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[2].dstSet = computeDescriptorSets[i];
@@ -124,7 +132,19 @@ namespace SwordR
 			descriptorWrites[2].descriptorCount = 1;
 			descriptorWrites[2].pBufferInfo = &storageBufferInfoCurrentFrame;
 
-			vkUpdateDescriptorSets(device->logicalDevice, 3, descriptorWrites.data(), 0, nullptr);
+			VkDescriptorImageInfo imageInfo{};
+			imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+			imageInfo.imageView = info.texture->imageView;
+			imageInfo.sampler = info.texture->sampler;
+			descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[3].dstSet = computeDescriptorSets[i];
+			descriptorWrites[3].dstBinding = 3;
+			descriptorWrites[3].dstArrayElement = 0;
+			descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			descriptorWrites[3].descriptorCount = 1;
+			descriptorWrites[3].pImageInfo = &imageInfo;
+
+			vkUpdateDescriptorSets(device->logicalDevice, 4, descriptorWrites.data(), 0, nullptr);
 		}
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};

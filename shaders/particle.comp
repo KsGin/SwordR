@@ -19,6 +19,8 @@ layout(std140, binding = 2) writeonly buffer ParticleSSBOOut {
    Particle particlesOut[ ];
 };
 
+layout (binding = 3, rgba8) uniform readonly image2D inputImage;
+
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 void main() 
@@ -31,9 +33,14 @@ void main()
         float x = xIndex / ubo.param.z * 0.9f + 0.05f;
         float y = yIndex / ubo.param.w * 1.8f + 0.05f;
         float time = ubo.param.y + 1.0f;
-
+        
         particlesOut[index].position = vec4(x, y, 1, 1);
         particlesOut[index].velocity = particleIn.velocity;
         particlesOut[index].color = vec4(cos(time) / 2 + 0.5f,0,cos(time) / 2 + 0.5f + sin(time) / 2 + 0.5f, 0.35f);
+
+        vec4 imageColor = imageLoad(inputImage, ivec2(x*2000, y*2000)).rgba;
+        if(imageColor.r > 0.1){
+            particlesOut[index].color.rba = imageColor.rba;
+        }
     }
 }

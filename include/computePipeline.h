@@ -5,6 +5,7 @@
 #include "device.h"
 #include "particle.h"
 #include "utils.h"
+#include "texture.h"
 
 namespace SwordR
 {
@@ -19,9 +20,16 @@ namespace SwordR
 		std::vector<VkDescriptorSet> computeDescriptorSets;
 		VkDescriptorPool computeDescriptorPool;
 
+		struct ComputePipelineCreateInfo
+		{
+		public:
+			ParticleSystem* particle;
+			Texture* texture;
+		};
+
 	public:
 
-		void create(Device* device, ParticleSystem* particleSystem);
+		void create(Device* device, ComputePipelineCreateInfo info);
 		void destroy();
 	};
 }

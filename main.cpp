@@ -41,9 +41,6 @@ int main() {
         return -1;
     }
 
-    auto* texture = new Texture();
-    texture->create(device, "textures\\logo.png");
-
     auto* camera = new Camera();
     camera->create(device);
     camera->position = glm::vec3(0, 0, 1.5f);
@@ -56,28 +53,34 @@ int main() {
     auto* model = new Model();
     model->create(device, Model::Quad);
 
-    auto* modelPipeline = new GraphicsPipeline();
-    modelPipeline->create(device, { GraphicsPipeline::ModelRenderPipeline , camera , texture });
+    auto* graphicsTexture = new Texture();
+    graphicsTexture->create(device, { "textures\\logo.png", VK_FORMAT_R8G8B8A8_SRGB, Texture::Graphics });
+
+    auto* modelGraphicsPipeline = new GraphicsPipeline();
+    modelGraphicsPipeline->create(device, { GraphicsPipeline::ModelRenderPipeline , camera , graphicsTexture });
 
     auto* particleSystem = new ParticleSystem();
     particleSystem->create(device);
 
-    auto* computePipeline = new ComputePipeline();
-    computePipeline->create(device, particleSystem);
+    auto* computeTexture = new Texture();
+    computeTexture->create(device, { "textures\\logo.png", VK_FORMAT_R8G8B8A8_UNORM, Texture::Compute });
 
-    auto* particlePipeline = new GraphicsPipeline();
-    particlePipeline->create(device, { GraphicsPipeline::ParticleRenderPipeline, camera });
+    auto* particleComputePipeline = new ComputePipeline();
+    particleComputePipeline->create(device, {particleSystem, computeTexture });
+
+    auto* particleGraphicsPipeline = new GraphicsPipeline();
+    particleGraphicsPipeline->create(device, { GraphicsPipeline::ParticleRenderPipeline, camera });
 
     while (!window->windowShouldClose())
     {
         window->update();
         camera->updateCameraUBO();
 
-        device->dispatch(particleSystem, computePipeline);
+        device->dispatch(particleSystem, particleComputePipeline);
 
         device->beginFrame();
-        device->draw(model, modelPipeline);
-        device->draw(particleSystem, particlePipeline);
+        device->draw(model, modelGraphicsPipeline);
+        device->draw(particleSystem, particleGraphicsPipeline);
         device->endFrame();
     }
 
@@ -86,23 +89,26 @@ int main() {
     particleSystem->destroy();
     delete particleSystem;
 
-    computePipeline->destroy();
-    delete computePipeline;
+    particleComputePipeline->destroy();
+    delete particleComputePipeline;
 
     model->destroy();
     delete model;
 
-    texture->destroy();
-    delete texture;
+    graphicsTexture->destroy();
+    delete graphicsTexture;
+
+    computeTexture->destroy();
+    delete computeTexture;
 
     camera->destroy();
     delete camera;
 
-    particlePipeline->destroy();
-    delete particlePipeline;
+    particleGraphicsPipeline->destroy();
+    delete particleGraphicsPipeline;
 
-    modelPipeline->destroy();
-    delete modelPipeline;
+    modelGraphicsPipeline->destroy();
+    delete modelGraphicsPipeline;
 
     device->destroy();
     delete device;

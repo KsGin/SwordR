@@ -4,24 +4,13 @@
 #include "../include/stb_image.h"
 namespace SwordR
 {
-	void Texture::create(Device* device, const char* path)
+	void Texture::create(Device* device, CreateInfo info)
 	{
         this->device = device;
-        image = CreateImageFromPath(device, path);
-        imageView = createImageView(device, image, VK_FORMAT_R8G8B8A8_SRGB);
-        sampler = createSampler(device);
-	}
-
-	void Texture::destroy()
-	{
-        releaseImage(device, image);
-        releaseImageView(device, imageView);
-        releaseSampler(device, sampler);
-	}
-
-	VkImage Texture::CreateImageFromPath(Device* device, const char* path) {
+        this->info = info;
+        VkFormat format = info.format;
         int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        stbi_uc* pixels = stbi_load(info.path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         VkDeviceSize imageSize = texWidth * texHeight * 4;
 
         if (!pixels) {
@@ -58,7 +47,6 @@ namespace SwordR
         vkUnmapMemory(device->logicalDevice, textureMemory);
         stbi_image_free(pixels);
 
-        VkImage textureImage;
         VkDeviceMemory textureImageMemory;
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -68,42 +56,43 @@ namespace SwordR
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = 1;
         imageInfo.arrayLayers = 1;
-        imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+        imageInfo.format = format;
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        if (info.usage == Usage::Graphics)
+        {
+            imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        }
+        else
+        {
+            imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+        }
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         imageInfo.flags = 0; // Optional
-        if (vkCreateImage(device->logicalDevice, &imageInfo, nullptr, &textureImage) != VK_SUCCESS) {
+        if (vkCreateImage(device->logicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
             throw std::runtime_error("failed to create image!");
         }
-
-        vkGetImageMemoryRequirements(device->logicalDevice, textureImage, &memRequirements);
-
+        vkGetImageMemoryRequirements(device->logicalDevice, image, &memRequirements);
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
         allocInfo.memoryTypeIndex = device->findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
         if (vkAllocateMemory(device->logicalDevice, &allocInfo, nullptr, &textureImageMemory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate image memory!");
         }
 
-        vkBindImageMemory(device->logicalDevice, textureImage, textureImageMemory, 0);
+        VkImageLayout layout = info.usage == Graphics ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
 
-        transitionImageLayout(device, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        copyBufferToImage(device, imageBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-        transitionImageLayout(device, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-        imageBufferMap.insert({ textureImage, textureImageMemory });
+        vkBindImageMemory(device->logicalDevice, image, textureImageMemory, 0);
+        transitionImageLayout(device, image, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        copyBufferToImage(device, imageBuffer, image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        transitionImageLayout(device, image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layout);
+        imageBufferMap.insert({ image, textureImageMemory });
 
         vkDestroyBuffer(device->logicalDevice, imageBuffer, nullptr);
         vkFreeMemory(device->logicalDevice, textureMemory, nullptr);
 
-        return textureImage;
-	}
-
-    VkImageView Texture::createImageView(Device* device, VkImage image, VkFormat format) {
+        // 创建image view
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewInfo.image = image;
@@ -115,22 +104,11 @@ namespace SwordR
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
-        VkImageView imageView;
         if (vkCreateImageView(device->logicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture image view!");
         }
 
-        return imageView;
-    }
-
-    void Texture::releaseImageView(Device* device, VkImageView imageView)
-    {
-        vkDestroyImageView(device->logicalDevice, imageView, nullptr);
-    }
-
-    VkSampler Texture::createSampler(Device* device)
-    {
-        VkSampler sampler{};
+        // 创建sampler
         VkSamplerCreateInfo samplerInfo{};
         samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -151,19 +129,15 @@ namespace SwordR
         if (vkCreateSampler(device->logicalDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture sampler!");
         }
+	}
 
-        return sampler;
-    }
-
-    void Texture::releaseSampler(Device* device, VkSampler sampler)
-    {
+	void Texture::destroy()
+	{
         vkDestroySampler(device->logicalDevice, sampler, nullptr);
-    }
-
-    void Texture::releaseImage(Device* device, VkImage image){
         vkFreeMemory(device->logicalDevice, imageBufferMap[image], nullptr);
         vkDestroyImage(device->logicalDevice, image, nullptr);
-    }
+        vkDestroyImageView(device->logicalDevice, imageView, nullptr);
+	}
 
     VkCommandBuffer Texture::beginSingleTimeCommands(Device* device) {
         VkCommandBufferAllocateInfo allocInfo{};
@@ -212,8 +186,6 @@ namespace SwordR
         barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
         barrier.subresourceRange.layerCount = 1;
-        barrier.srcAccessMask = 0; // TODO
-        barrier.dstAccessMask = 0; // TODO
 
         VkPipelineStageFlags sourceStage;
         VkPipelineStageFlags destinationStage;
@@ -231,6 +203,13 @@ namespace SwordR
 
             sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+        else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         }
         else {
             throw std::invalid_argument("unsupported layout transition!");
